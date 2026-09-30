@@ -1,0 +1,600 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ScanHeader from "../components/ScanHeader.astro";
+import ButtonLink from "../components/ButtonLink.astro";
+import { perspectivePreprintUrl } from "../config/site";
+import { criteriaRubric, criteriaStats, screening, stats } from "../data/loaders";
+
+const technologyMatrices = [...new Set(criteriaRubric.flatMap((criterion) => criterion.technologies.map((technology) => technology.type)))]
+  .filter(Boolean)
+  .map((type) => ({
+    id: type.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+    type,
+    rows: criteriaRubric
+      .map((criterion) => ({
+        criterion,
+        technology: criterion.technologies.find((technology) => technology.type === type)
+      }))
+      .filter((row) => row.technology)
+  }));
+---
+
+<BaseLayout title="About | DIY Biofabrication Atlas" description="About the DIY biofabrication corpus website.">
+  <section class="about-page">
+    <ScanHeader
+      eyebrow="About"
+      title="Evidence-backed atlas for DIY biofabrication."
+      description="The public site is generated from curated paper records, publication metadata, and linked open-source resources."
+    />
+
+    {perspectivePreprintUrl && (
+      <div class="preprint-banner panel">
+        <h2>Perspective preprint</h2>
+        <p class="muted">Read the full DIY biofabrication perspective that this atlas supports.</p>
+        <ButtonLink href={perspectivePreprintUrl} external>Read the perspective preprint</ButtonLink>
+      </div>
+    )}
+
+    <div class="about-grid">
+      <div class="panel about-block">
+        <h2>Current build</h2>
+        <ul>
+          <li>{stats.paperCount} builds, published {stats.yearMin}–{stats.yearMax}</li>
+          <li>{stats.categoryCounts.length} application areas</li>
+          <li>{stats.doiCount} of {stats.paperCount} DOIs verified against Crossref or DataCite</li>
+          <li>
+            {stats.openAccessCount} open access, {stats.closedAccessCount} closed
+            {stats.accessUnknownCount > 0 && <span class="muted"> ({stats.accessUnknownCount} not indexed by OpenAlex, so unknown)</span>}
+          </li>
+          <li>
+            {stats.retractedCount} retractions among the {stats.retractionCheckedCount} we could check
+            {stats.paperCount - stats.retractionCheckedCount > 0 && (
+              <span class="muted"> ({stats.paperCount - stats.retractionCheckedCount} unverifiable)</span>
+            )}
+          </li>
+          <li>{stats.criteriaMappedCount} records with implementation scoring</li>
+        </ul>
+      </div>
+      <div class="panel about-block">
+        <h2>Other views of the same records</h2>
+        <ul>
+          <li><ButtonLink href="/tools" variant="ghost">Tools</ButtonLink> — named open-source systems</li>
+          <li><ButtonLink href="/skills" variant="ghost">Skills</ButtonLink> — barrier levels and technical tags</li>
+          <li><ButtonLink href="/assets" variant="ghost">Assets</ButtonLink> — CAD, BOM, protocols, firmware</li>
+          <li><ButtonLink href="/collections" variant="ghost">Collections</ButtonLink> — curated viewpoint lenses</li>
+        </ul>
+      </div>
+      <div class="panel about-block">
+        <h2>Machine-readable use</h2>
+        <ul>
+          <li><ButtonLink href="/api" variant="ghost">API documentation</ButtonLink> — every record as JSON</li>
+          <li><ButtonLink href="/ontology" variant="ghost">Ontology schema</ButtonLink></li>
+          <li>Knowledge graph with explicit relation types</li>
+        </ul>
+      </div>
+    </div>
+
+    <section class="inclusion" id="inclusion" aria-labelledby="inclusion-heading">
+      <h2 class="zone-title" id="inclusion-heading">What is in the corpus, and what is not</h2>
+      <p class="inclusion-lede">
+        A curator read <strong>{screening.screened}</strong> papers and kept <strong>{screening.kept}</strong>.
+        A paper is kept when it is the primary description of a piece of open-source hardware for
+        biofabrication or the laboratory automation around it — a bioprinter, a liquid handler, a
+        bioreactor, a microfluidic fabrication method — presented as a build someone else could attempt,
+        in one of the {stats.categoryCounts.length} application areas. The {screening.excludedCount} set aside are
+        open hardware too, but not this kind:
+      </p>
+      <ul class="inclusion-groups">
+        {screening.groups.map((g) => <li><b>{g.count}</b> {g.group}</li>)}
+      </ul>
+      <details class="inclusion-list">
+        <summary>The {screening.excludedCount} papers read and not included</summary>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr><th scope="col">Paper</th><th scope="col">Curators' label</th><th scope="col">Set aside as</th></tr></thead>
+            <tbody>
+              {screening.excluded.map((row) => (
+                <tr>
+                  <td>{row.doi ? <a href={`https://doi.org/${row.doi}`} target="_blank" rel="noreferrer">{row.title}</a> : row.title}</td>
+                  <td>{row.technologyType}</td>
+                  <td>{row.group}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+      <p class="inclusion-note muted">
+        The grouping reads the curators' technology label and the title; it is a guide to what was set
+        aside, not a second review. Know a paper that fits the rule? <a href="/suggest">Propose it</a>.
+      </p>
+    </section>
+
+    <section class="rubric-section" aria-labelledby="rubric-heading">
+      <div class="rubric-intro">
+        <div>
+          <h2 id="rubric-heading">Criteria used to score source evidence</h2>
+        </div>
+        <p class="muted">
+          The rubric is generated from <code>lists/curated/criteria_rubric.csv</code>. Each criterion has separate anchors for
+          bioprinting, liquid handling, and microfabrication papers; score 1 indicates the least accessible or least capable case,
+          and score 5 indicates the strongest case for the stated criterion.
+        </p>
+      </div>
+
+      <div class="panel criteria-coverage">
+        <h3>What each criterion turned out to be worth</h3>
+        <p class="muted">
+          Measured across the {stats.paperCount} records rather than assumed from the rubric. A criterion
+          scored for fewer than half the corpus cannot rank it, and one that gives more than 70% of records
+          the same value is a label rather than a measurement. Two fail on those grounds and are not shown
+          on record pages; both remain in the published CSVs.
+        </p>
+        <div class="table-scroll">
+          <table class="coverage-table">
+          <thead>
+            <tr>
+              <th scope="col">Criterion</th>
+              <th scope="col" class="col-num">Scored</th>
+              <th scope="col" class="col-num">Range used</th>
+              <th scope="col" class="col-num">Most common value</th>
+              <th scope="col">Shown on records</th>
+            </tr>
+          </thead>
+          <tbody>
+            {criteriaStats.map((criterion) => (
+              <tr class:list={[!criterion.display && "is-withheld"]}>
+                <th scope="row">{criterion.name}</th>
+                <td class="col-num">{criterion.scoredCount} / {criterion.totalCount}</td>
+                <td class="col-num">{criterion.observedMin ?? "—"}–{criterion.observedMax ?? "—"}</td>
+                <td class="col-num">{Math.round(criterion.modeShare * 100)}%</td>
+                <td>{criterion.display ? "Yes" : `No — ${criterion.withheldReason}`}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        </div>
+        <p class="muted coverage-note">
+          Eight of the ten never award a 1 or a 5, so the nominal 1–5 scale is in practice a 2–4 scale.
+          Record pages show each score against the range the corpus actually uses, so a 3 is not read as a
+          failing mark when it is the median.
+        </p>
+      </div>
+
+      <details class="rubric-disclosure">
+        <summary>Show the full scoring matrix — every criterion's anchors, per technology</summary>
+      <div class="rubric-tabs" data-rubric-tabs>
+        <div class="rubric-tabbar">
+          <span class="rubric-tabbar-label">Technique</span>
+          <div class="rubric-tablist" role="tablist" aria-label="Technique matrices">
+            {technologyMatrices.map((matrix, index) => (
+              <button
+                type="button"
+                role="tab"
+                id={`rubric-tab-${matrix.id}`}
+                aria-controls={`rubric-panel-${matrix.id}`}
+                aria-selected={index === 0 ? "true" : "false"}
+                tabindex={index === 0 ? "0" : "-1"}
+              >
+                <span>{matrix.type}</span>
+                <small>{matrix.rows.length}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+        {technologyMatrices.map((matrix, index) => (
+          <section
+            class="panel rubric-criterion"
+            id={`rubric-panel-${matrix.id}`}
+            role="tabpanel"
+            aria-labelledby={`rubric-tab-${matrix.id}`}
+            hidden={index !== 0}
+          >
+            <div class="rubric-panel-heading">
+              <h3>{matrix.type}</h3>
+              <span>{matrix.rows.length} criteria</span>
+            </div>
+            <p class="rubric-description">Score anchors for all implementation criteria under the {matrix.type} technique.</p>
+            <div class="rubric-table-wrap">
+              <table class="rubric-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Criterion</th>
+                    <th scope="col">Evidence to extract</th>
+                    <th scope="col">1</th>
+                    <th scope="col">2</th>
+                    <th scope="col">3</th>
+                    <th scope="col">4</th>
+                    <th scope="col">5</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {matrix.rows.map(({ criterion, technology }) => (
+                    <tr>
+                      <th scope="row">
+                        <span class="criterion-name" aria-label={criterion.name}>
+                          {criterion.name.split("/").map((part, partIndex) => (
+                            <span class="criterion-name-part">
+                              {partIndex > 0 && <span class="criterion-name-separator" aria-hidden="true">/</span>}
+                              {part.trim()}
+                            </span>
+                          ))}
+                        </span>
+                        <small>{criterion.description}</small>
+                      </th>
+                      <td>{technology?.informationToExtract}</td>
+                      {technology?.scores.map((score) => <td>{score.anchor}</td>)}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ))}
+      </div>
+      </details>
+    </section>
+  </section>
+  <script>
+    const rubricTabsRoot = document.querySelector("[data-rubric-tabs]");
+
+    if (rubricTabsRoot) {
+      const tabs = Array.from(rubricTabsRoot.querySelectorAll<HTMLButtonElement>("[role='tab']"));
+      const panels = Array.from(rubricTabsRoot.querySelectorAll<HTMLElement>("[role='tabpanel']"));
+
+      const selectRubricTab = (tab: HTMLButtonElement) => {
+        tabs.forEach((candidate) => {
+          const active = candidate === tab;
+          candidate.setAttribute("aria-selected", active ? "true" : "false");
+          candidate.setAttribute("tabindex", active ? "0" : "-1");
+        });
+        panels.forEach((panel) => {
+          panel.hidden = panel.id !== tab.getAttribute("aria-controls");
+        });
+        tab.focus();
+      };
+
+      tabs.forEach((tab, index) => {
+        tab.addEventListener("click", () => selectRubricTab(tab));
+        tab.addEventListener("keydown", (event) => {
+          let nextIndex = -1;
+          if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = (index + 1) % tabs.length;
+          else if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = (index - 1 + tabs.length) % tabs.length;
+          else if (event.key === "Home") nextIndex = 0;
+          else if (event.key === "End") nextIndex = tabs.length - 1;
+          if (nextIndex < 0) return;
+          event.preventDefault();
+          selectRubricTab(tabs[nextIndex]);
+        });
+      });
+    }
+  </script>
+</BaseLayout>
+
+<style>
+  .criteria-coverage { padding: var(--space-5); margin-bottom: var(--space-5); }
+  .criteria-coverage h3 { margin: 0 0 var(--space-2); font-size: var(--text-sm); }
+  .criteria-coverage > .muted { max-width: 80ch; margin: 0 0 var(--space-4); font-size: var(--text-sm); }
+  .coverage-table { width: 100%; border-collapse: collapse; font-size: var(--text-xs); }
+  .coverage-table th, .coverage-table td { padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  .coverage-table thead th { color: var(--muted); border-bottom-color: var(--line-strong); white-space: nowrap; }
+  .coverage-table tbody th { font-weight: 700; }
+  .coverage-table .col-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .coverage-table .is-withheld { color: var(--muted); }
+  .coverage-note { margin: var(--space-4) 0 0; max-width: 80ch; font-size: var(--text-sm); }
+
+  .about-page {
+    padding: 0;
+    min-width: 0;
+  }
+
+  .preprint-banner {
+    padding: var(--space-5);
+    margin: var(--space-4) 0 var(--space-6);
+    border-color: color-mix(in oklch, var(--accent) 25%, var(--line));
+  }
+
+  .preprint-banner h2 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-md);
+  }
+
+  .about-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+
+  .about-block {
+    padding: var(--space-5);
+  }
+
+  .about-block h2 {
+    margin: 0 0 var(--space-4);
+    font-size: var(--text-lg);
+  }
+
+  .about-block ul {
+    margin: 0;
+    padding-left: var(--space-5);
+    font-size: var(--text-sm);
+  }
+
+  .about-block li + li {
+    margin-top: var(--space-2);
+  }
+
+  .rubric-disclosure > summary {
+    padding: var(--space-3) 0;
+    color: var(--accent);
+    font-size: var(--text-xs);
+    cursor: pointer;
+  }
+
+  .rubric-section {
+    margin-top: var(--space-6);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--line);
+  }
+
+  .inclusion { margin: var(--space-6) 0; padding-top: var(--space-5); border-top: 1px solid var(--line); }
+  .inclusion-lede { max-width: 78ch; margin: 0 0 var(--space-3); font-size: var(--text-sm); line-height: 1.6; }
+  .inclusion-groups {
+    display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4);
+    margin: 0 0 var(--space-3); padding: 0; list-style: none; font-size: var(--text-xs);
+  }
+  .inclusion-groups b { color: var(--accent-2-ink); font-variant-numeric: tabular-nums; }
+  .inclusion-list summary { cursor: pointer; font-size: var(--text-xs); color: var(--muted); }
+  .inclusion-list .table-scroll { margin-top: var(--space-3); }
+  .inclusion-note { max-width: 78ch; margin: var(--space-3) 0 0; font-size: var(--text-xs); }
+
+  .rubric-intro {
+    display: grid;
+    grid-template-columns: minmax(14rem, 0.55fr) minmax(0, 1fr);
+    gap: var(--space-5);
+    align-items: start;
+    margin-bottom: var(--space-4);
+  }
+
+
+  .rubric-intro h2 {
+    margin: 0;
+    font-size: var(--text-lg);
+  }
+
+  .rubric-intro p {
+    margin: 0;
+    max-width: 78ch;
+    font-size: var(--text-sm);
+  }
+
+  .rubric-tabs {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .rubric-tabbar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: stretch;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .rubric-tabbar-label {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--control-height);
+    padding: 0 var(--space-3);
+    border-right: 1px solid var(--line);
+    background: var(--surface-alt);
+    color: var(--muted);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .rubric-tablist {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .rubric-tablist button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--control-height);
+    padding: 0 var(--space-3);
+    border: 0;
+    border-right: 1px solid var(--line);
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--text-xs);
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .rubric-tablist button:focus-visible {
+    background: var(--surface-alt);
+  }
+
+  .rubric-tablist button[aria-selected="true"] {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .rubric-tablist small {
+    font-size: var(--text-2xs);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rubric-criterion {
+    padding: 0;
+    overflow: clip;
+  }
+
+  .rubric-criterion[hidden] {
+    display: none;
+  }
+
+  .rubric-panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .rubric-panel-heading h3 {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  .rubric-panel-heading span {
+    color: var(--muted);
+    font-size: var(--text-xs);
+    font-weight: 400;
+    white-space: nowrap;
+  }
+
+  .rubric-description {
+    margin: 0;
+    padding: var(--space-3) var(--space-4);
+    max-width: 78ch;
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+
+  .rubric-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    border-top: 1px solid var(--line);
+  }
+
+  .rubric-table {
+    width: 100%;
+    min-width: 68rem;
+    border-collapse: collapse;
+    table-layout: fixed;
+    background: var(--surface);
+    font-size: var(--text-xs);
+  }
+
+  .rubric-table th,
+  .rubric-table td {
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+
+  .rubric-table thead th {
+    background: var(--surface-alt);
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  .rubric-table th:first-child {
+    width: 24%;
+  }
+
+  .rubric-table th:nth-child(2) {
+    width: 18%;
+  }
+
+  .rubric-table th:nth-child(n + 3) {
+    width: 11.6%;
+  }
+
+  .rubric-table tbody th {
+    color: var(--ink);
+  }
+
+  .criterion-name,
+  .rubric-table tbody th small {
+    display: block;
+  }
+
+  .criterion-name {
+    display: grid;
+    gap: 0.15rem;
+    line-height: 1.25;
+  }
+
+  .criterion-name-part {
+    display: block;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  .criterion-name-separator {
+    display: inline;
+    margin-right: 0.25rem;
+    color: var(--muted);
+  }
+
+  .rubric-table tbody th small {
+    margin-top: var(--space-1);
+    color: var(--muted);
+    font-size: var(--text-2xs);
+    font-weight: 400;
+    line-height: 1.35;
+  }
+
+  .rubric-table tbody td:first-of-type {
+    color: var(--muted);
+  }
+
+  .rubric-table tbody tr:last-child th,
+  .rubric-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+
+  @media (max-width: 900px) {
+    .about-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .rubric-intro {
+      grid-template-columns: 1fr;
+      gap: var(--space-2);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .rubric-tabbar {
+      grid-template-columns: 1fr;
+    }
+
+    .rubric-tabbar-label {
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .rubric-panel-heading {
+      align-items: start;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .rubric-table {
+      min-width: 64rem;
+    }
+  }
+</style>

@@ -1,0 +1,16 @@
+---
+export interface Props {
+  title: string;
+  defaultOpen?: boolean;
+  class?: string;
+}
+
+const { title, defaultOpen = false, class: className = "" } = Astro.props;
+---
+
+<details class:list={["collapsible-block", className]} open={defaultOpen}>
+  <summary class="collapsible-block-summary">{title}</summary>
+  <div class="collapsible-block-body">
+    <slot />
+  </div>
+</details>

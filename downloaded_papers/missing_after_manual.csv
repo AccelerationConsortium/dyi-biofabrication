@@ -1,0 +1,8 @@
+index,title,doi,open_access,oa_status,source,url,file,status,message
+12,Development of an Open-Source Low-Cost Modular Quad-Extrusion 3D Bioprinter,10.1115/msec2023-104996,False,closed,,,,skipped,no OA PDF URL found in CSV or OpenAlex
+13,Development and characterization of a low-cost 3D bioprinter,10.1016/j.bprint.2019.e00044,False,closed,,,,skipped,no OA PDF URL found in CSV or OpenAlex
+28,Design of Multi-nozzle Bio-3D Printer System Based on Marlin Firmware,10.1007/978-981-16-7381-8_103,False,closed,,,,skipped,no OA PDF URL found in CSV or OpenAlex
+37,Systematic design of an advanced open-source 3D bioprinter for extrusion and electrohydrodynamic-based processes,10.1007/s00170-021-06634-1,False,closed,,,,skipped,no OA PDF URL found in CSV or OpenAlex
+42,Large volume syringe pump extruder for desktop 3D printers,10.1016/j.ohx.2018.02.001,True,gold,csv_oa_pdf_url,https://doi.org/10.1016/j.ohx.2018.02.001,,failed,https://doi.org/10.1016/j.ohx.2018.02.001 => not a PDF: content-type=text/html;charset=UTF-8; final_url=https://linkinghub.elsevier.com/retrieve/pii/S2468067217300822 | curl response was not a PDF
+43,A desktop multi-material 3D bio-printing system with open-source hardware and software,10.1007/s12541-017-0072-x,False,closed,,,,skipped,no OA PDF URL found in CSV or OpenAlex
+122,https://www.hardware-x.com/article/S2468-0672(18)30087-7/fulltext,,,,,,,skipped,no OA PDF URL found in CSV or OpenAlex

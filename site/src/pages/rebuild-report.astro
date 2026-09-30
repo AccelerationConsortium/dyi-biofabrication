@@ -1,0 +1,179 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ScanHeader from "../components/ScanHeader.astro";
+import { githubRepo, githubRepoUrl } from "../config/site";
+
+const outcomes = [
+  "Completed and working",
+  "Completed but underperforming",
+  "Partially built, stalled",
+  "Abandoned"
+];
+
+const settings = [
+  "Teaching laboratory",
+  "Research laboratory",
+  "Core facility",
+  "Individual / hobbyist",
+  "Company",
+  "Other"
+];
+---
+
+<BaseLayout
+  title="Report a rebuild | DIY Biofabrication Atlas"
+  description="Tell us what happened when you tried to build an open design from the Atlas, including attempts that stalled or failed."
+>
+  <ScanHeader
+    eyebrow="Rebuild report"
+    title="Did you try to build one of these?"
+    description="A design nobody has rebuilt is a claim rather than a tool. Attempts that stalled or failed are as useful as ones that worked: they tell the next laboratory what the documentation leaves out. Reports are not scores, and the Atlas does not rank builds."
+  />
+
+  <div class="panel access-note">
+    <strong>Note:</strong> this repository is currently private, so opening the issue works only if
+    your GitHub account has access to <a href={githubRepoUrl} target="_blank" rel="noreferrer">{githubRepo}</a>.
+    Otherwise use <em>Copy report</em> and send it to the maintainers.
+  </div>
+
+  <form id="rebuild-form" class="rr-layout" novalidate>
+    <div class="rr-main">
+      <section class="panel form-section">
+        <h2>What you built</h2>
+        <div class="form-grid">
+          <label class="control-field span-2">
+            <span class="control-label">Which build *</span>
+            <input id="rr-build" type="text" placeholder="Name and DOI, e.g. Replistruder 4 — 10.1016/j.ohx.2020.e00170" />
+          </label>
+          <label class="control-field">
+            <span class="control-label">Outcome *</span>
+            <select id="rr-outcome">
+              <option value="">Choose…</option>
+              {outcomes.map((o) => <option value={o}>{o}</option>)}
+            </select>
+          </label>
+          <label class="control-field">
+            <span class="control-label">Setting</span>
+            <select id="rr-setting">
+              <option value="">Not stated</option>
+              {settings.map((o) => <option value={o}>{o}</option>)}
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="panel form-section">
+        <h2>What it actually took</h2>
+        <p class="muted section-note">
+          Published costs frequently exclude the printer or robot the design mounts on. What you
+          actually paid, and how long it actually took, is the number the next laboratory needs.
+        </p>
+        <div class="form-grid">
+          <label class="control-field">
+            <span class="control-label">Time spent</span>
+            <input id="rr-build-time" type="text" placeholder="e.g. 3 days, or ~20 h" />
+          </label>
+          <label class="control-field">
+            <span class="control-label">Actual cost paid</span>
+            <input id="rr-actual-cost" type="text" placeholder="e.g. 1,150 CAD including the printer" />
+          </label>
+        </div>
+      </section>
+
+      <section class="panel form-section">
+        <h2>What the documentation missed *</h2>
+        <p class="muted section-note">
+          Parts absent from the bill of materials, steps that were unclear, files that would not
+          open, tolerances that mattered.
+        </p>
+        <label class="control-field">
+          <span class="sr-only">What the documentation missed</span>
+          <textarea id="rr-docs-gaps" rows="5" placeholder="The BOM omitted the 12 V supply, and the STL for the carriage needed scaling…"></textarea>
+        </label>
+      </section>
+
+      <section class="panel form-section">
+        <h2>Anything you measured</h2>
+        <p class="muted section-note">
+          Optional, and the most valuable part if you have it. A figure you checked yourself, how
+          you measured it, and the standard you measured against.
+        </p>
+        <label class="control-field">
+          <span class="sr-only">Performance you measured</span>
+          <textarea id="rr-measured" rows="3" placeholder="Dispensed volume within 1.2% of nominal at 200 µL, n=20, checked gravimetrically…"></textarea>
+        </label>
+        <label class="control-field">
+          <span class="control-label">Anything else</span>
+          <textarea id="rr-notes" rows="2"></textarea>
+        </label>
+      </section>
+    </div>
+
+    <aside class="panel rr-review">
+      <h2>Your report</h2>
+      <div id="rr-status" class="form-status" aria-live="polite"></div>
+      <pre id="rr-preview" tabindex="0"></pre>
+      <div class="review-actions">
+        <button id="rr-copy" class="button-link secondary" type="button">Copy report</button>
+        <a id="rr-open" class="button-link" href={`${githubRepoUrl}/issues/new`} target="_blank" rel="noreferrer" aria-disabled="true">Open GitHub issue</a>
+      </div>
+      <p class="muted privacy-note">Nothing is sent until you open the issue.</p>
+    </aside>
+  </form>
+
+  <script>
+    import { initRebuildReport } from "../scripts/rebuild-report.mjs";
+    initRebuildReport();
+  </script>
+</BaseLayout>
+
+<style>
+  .access-note {
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-5);
+    font-size: var(--text-sm);
+    border-color: color-mix(in oklch, var(--accent-2) 30%, var(--line));
+  }
+
+  .rr-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 22rem;
+    gap: var(--space-5);
+    align-items: start;
+  }
+
+  .form-section { padding: var(--space-5); margin-bottom: var(--space-4); }
+  .form-section h2 { margin: 0 0 var(--space-2); font-size: var(--text-md); }
+  .section-note { margin: 0 0 var(--space-3); font-size: var(--text-sm); max-width: 66ch; }
+
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-4); }
+  .form-grid .span-2 { grid-column: 1 / -1; }
+
+.rr-review { position: sticky; top: var(--space-4); padding: var(--space-5); display: grid; gap: var(--space-3); }
+  .rr-review h2 { margin: 0; font-size: var(--text-md); }
+  .form-status { font-size: var(--text-xs); color: var(--muted); }
+
+  #rr-preview {
+    margin: 0;
+    padding: var(--space-3);
+    max-height: 22rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  .review-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  #rr-open[aria-disabled="true"] { pointer-events: none; opacity: 0.5; }
+  .privacy-note { margin: 0; font-size: var(--text-2xs); }
+
+  @media (max-width: 900px) {
+    .rr-layout { grid-template-columns: 1fr; }
+    .rr-review { position: static; }
+    .form-grid { grid-template-columns: 1fr; }
+  }
+</style>

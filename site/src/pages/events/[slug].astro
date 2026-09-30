@@ -1,0 +1,45 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import DetailShell from "../../components/DetailShell.astro";
+import { events, papers } from "../../data/loaders";
+
+export function getStaticPaths() {
+  return events.map((event) => ({
+    params: { slug: event.slug },
+    props: { event }
+  }));
+}
+
+const { event } = Astro.props;
+const linkedPapers = papers.filter((paper) => event.paperIds.includes(paper.id));
+---
+<BaseLayout title={`${event.name} | DIY Biofabrication Atlas`} description={`Derived ${event.type} record.`}>
+  <DetailShell breadcrumb={[{ label: "Events", href: "/events" }, { label: event.name }]}>
+    <section class="panel detail-lead">
+      <div class="chip-row">
+        <span class="chip">{event.type}</span>
+        <span class="chip">{event.paperCount} papers</span>
+        <span class="chip">{event.provenanceSource === "manifest" ? "curated" : "heuristic"}</span>
+      </div>
+      <h1>{event.name}</h1>
+      <p class="muted summary">This event record was derived from the venue and publication context in the corpus.</p>
+      <div class="detail-actions">
+        {event.url && <a class="button-link" href={event.url} target="_blank" rel="noreferrer">Open source page</a>}
+        <a class="button-link secondary" href={`/graph?node=${event.id}`}>Open in graph</a>
+      </div>
+    </section>
+
+    <section class="panel detail-block">
+      <h2>Venue context</h2>
+      <p class="muted">{event.venue}</p>
+      {event.notes && <p class="muted note">{event.notes}</p>}
+    </section>
+
+    <section class="panel detail-block">
+      <h2>Linked papers</h2>
+      <div class="chip-row">
+        {linkedPapers.map((paper) => <a class="chip" href={`/papers/${paper.slug}`}>{paper.title}</a>)}
+      </div>
+    </section>
+  </DetailShell>
+</BaseLayout>

@@ -1,0 +1,32 @@
+---
+import ButtonLink from "./ButtonLink.astro";
+
+export interface Props {
+  type: "tool" | "paper" | "repo" | "skill" | "asset" | "topic" | "event";
+  label: string;
+}
+
+const { type, label } = Astro.props;
+---
+
+<div class="panel suggest-banner">
+  <p class="muted">Know a paper whose {label} belongs here?</p>
+  <ButtonLink href="/suggest" variant="secondary">Propose the paper</ButtonLink>
+</div>
+
+<style>
+  .suggest-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  .suggest-banner p {
+    margin: 0;
+    font-size: var(--text-xs);
+  }
+</style>

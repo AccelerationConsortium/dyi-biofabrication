@@ -1,0 +1,282 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ScanHeader from "../../components/ScanHeader.astro";
+import ButtonLink from "../../components/ButtonLink.astro";
+import { endpoints, FIELD_NOTES } from "../../data/api-endpoints";
+import { ontology } from "../../data/ontology";
+import { graph, stats } from "../../data/loaders";
+
+/**
+ * How to read the data without reading the website.
+ *
+ * Everything on this page is computed from the payloads themselves at build time -- counts,
+ * sizes, samples and field tables all come from the same arrays the JSON endpoints serve --
+ * so the documentation cannot describe a shape the files no longer have.
+ */
+
+const sizeKb = (items: unknown[]) => Math.max(1, Math.round(JSON.stringify(items).length / 1024));
+
+/** Infer a field's type by looking at a real value rather than trusting a declaration. */
+function typeOf(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "array";
+    return `${typeOf(value[0])}[]`;
+  }
+  return typeof value;
+}
+
+const documented = endpoints.map((endpoint) => {
+  const sample = endpoint.items[0] as Record<string, unknown> | undefined;
+  return {
+    ...endpoint,
+    count: endpoint.items.length,
+    kb: sizeKb(endpoint.items),
+    fields: sample
+      ? Object.entries(sample).map(([key, value]) => ({
+          key,
+          type: typeOf(value),
+          note: FIELD_NOTES[key] ?? ""
+        }))
+      : []
+  };
+});
+
+/** A sample trimmed to something readable; the endpoint itself has the whole thing. */
+function sampleJson(items: unknown[], lines = 26): string {
+  const text = JSON.stringify(items[0] ?? {}, null, 2).split("\n");
+  if (text.length <= lines) return text.join("\n");
+  return [...text.slice(0, lines), "  …"].join("\n");
+}
+
+const relations = [...new Set(graph.edges.map((edge) => edge.relation))].sort();
+const buildDate = new Date().toISOString().slice(0, 10);
+const sections = [
+  { id: "using", label: "Using the API" },
+  { id: "endpoints", label: "Endpoints" },
+  { id: "records", label: "Records" },
+  { id: "graph", label: "Graph and ontology" },
+  { id: "reuse", label: "Reuse" }
+];
+---
+
+<BaseLayout
+  title="API | DIY Biofabrication Atlas"
+  description="Every record in the DIY Biofabrication Atlas as static JSON: endpoints, field meanings, and what an empty value means."
+>
+  <ScanHeader
+    eyebrow="Machine-readable"
+    title="Use the Atlas as data"
+    description="Every record this site shows is published as static JSON. There is no authentication, no rate limit and no pagination: each endpoint is one file holding the whole entity."
+    statValue={String(documented.length)}
+    statLabel="endpoints"
+  />
+
+  <nav class="api-toc" aria-label="On this page">
+    {sections.map((section) => <a href={`#${section.id}`}>{section.label}</a>)}
+  </nav>
+
+  <section class="page-zone" id="using" aria-labelledby="using-heading">
+    <h2 class="zone-title" id="using-heading">Using the API</h2>
+    <p class="api-lede">
+      Corpus of {stats.paperCount} builds published {stats.yearMin}–{stats.yearMax}. Ontology
+      version {ontology.version}; this page was generated on {buildDate}.
+    </p>
+    <pre class="api-code"><code>curl -s https://biofabtoolkit.accelerationconsortium.ai/api/papers.json | jq '.items[0].title'
+
+const &#123; items &#125; = await fetch("https://biofabtoolkit.accelerationconsortium.ai/api/papers.json").then((r) =&gt; r.json());</code></pre>
+    <p>Every endpoint returns the same envelope:</p>
+    <pre class="api-code"><code>&#123; "entity": "Paper", "count": {stats.paperCount}, "items": [ … ] &#125;</code></pre>
+
+    <h3 class="api-sub">Conventions worth knowing before you parse anything</h3>
+    <ul class="api-notes">
+      <li>
+        <strong>An empty string or null means the source is silent</strong>, not that the answer
+        is no. A build with <code>"artifactLicence": &#123; "value": "" &#125;</code> is one whose
+        licence nobody could find, which is a finding about the paper.
+      </li>
+      <li>
+        <strong>Several fields hold multiple values separated by <code> | </code></strong>, among
+        them <code>doi</code>, <code>approximateCost</code> and <code>systemOrTechnology</code>.
+      </li>
+      <li>
+        <strong>Costs are free text, exactly as each paper states them.</strong> They are not
+        normalised to a currency or a year, and eleven records name no currency at all.
+      </li>
+      <li>
+        <strong><code>derived.*</code> is computed by the build</strong>, not recorded by a
+        curator. Everything else was either transcribed from the source or extracted from the
+        full text, and <code>provenanceSource</code> says which.
+      </li>
+      <li>
+        <strong>Ids are not stable across builds.</strong> Cite a record by <code>doi</code>, or
+        by <code>slug</code> if you want the page.
+      </li>
+    </ul>
+  </section>
+
+  <section class="page-zone" id="endpoints" aria-labelledby="endpoints-heading">
+    <h2 class="zone-title" id="endpoints-heading">Endpoints</h2>
+    <div class="table-scroll">
+      <table class="data-table">
+      <thead>
+        <tr>
+          <th scope="col">Path</th>
+          <th scope="col">Entity</th>
+          <th scope="col" class="col-num">Records</th>
+          <th scope="col" class="col-num">Size</th>
+          <th scope="col">What it holds</th>
+        </tr>
+      </thead>
+      <tbody>
+        {documented.map((endpoint) => (
+          <tr>
+            <th scope="row"><a href={endpoint.path}><code>{endpoint.path}</code></a></th>
+            <td>{endpoint.entity}</td>
+            <td class="col-num">{endpoint.count}</td>
+            <td class="col-num">{endpoint.kb} KB</td>
+            <td>{endpoint.description}</td>
+          </tr>
+        ))}
+        <tr>
+          <th scope="row"><a href="/api/index.json"><code>/api/index.json</code></a></th>
+          <td>Directory</td>
+          <td class="col-num">{documented.length}</td>
+          <td class="col-num">1 KB</td>
+          <td>This table, as JSON.</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section class="page-zone" id="records" aria-labelledby="records-heading">
+    <h2 class="zone-title" id="records-heading">Records</h2>
+    <p class="api-lede">
+      Field lists are read from a real record in each file, so they describe what is actually
+      served. Notes cover the fields whose names are easy to misread; the rest are what they
+      look like.
+    </p>
+    {documented.map((endpoint) => (
+      <details class="api-entity">
+        <summary>
+          <strong>{endpoint.entity}</strong>
+          <span class="muted">{endpoint.fields.length} fields · {endpoint.count} records</span>
+        </summary>
+        <div class="api-entity-body">
+          <div class="table-scroll">
+            <table class="data-table">
+            <thead>
+              <tr><th scope="col">Field</th><th scope="col">Type</th><th scope="col">Note</th></tr>
+            </thead>
+            <tbody>
+              {endpoint.fields.map((field) => (
+                <tr>
+                  <th scope="row"><code>{field.key}</code></th>
+                  <td><code class="api-type">{field.type}</code></td>
+                  <td>{field.note || <span class="absent">—</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          </div>
+          <p class="api-sample-label">First record, truncated:</p>
+          <pre class="api-code"><code>{sampleJson(endpoint.items)}</code></pre>
+        </div>
+      </details>
+    ))}
+  </section>
+
+  <section class="page-zone" id="graph" aria-labelledby="graph-heading">
+    <h2 class="zone-title" id="graph-heading">Graph and ontology</h2>
+    <p>
+      <code>/api/graph.json</code> holds {graph.nodes.length} nodes and {graph.edges.length} edges.
+      A node is <code>&#123; id, type, slug, label &#125;</code> where type is one of paper, tool,
+      repo, topic, asset or event. An edge is
+      <code>&#123; source, target, relation &#125;</code>, and relation is one of:
+    </p>
+    <p class="api-relations">
+      {relations.map((relation) => <code>{relation}</code>)}
+    </p>
+    <p>
+      <ButtonLink href="/api/ontology.json" variant="secondary">ontology.json</ButtonLink>
+      <ButtonLink href="/ontology" variant="ghost">Schema page</ButtonLink>
+    </p>
+  </section>
+
+  <section class="page-zone" id="reuse" aria-labelledby="reuse-heading">
+    <h2 class="zone-title" id="reuse-heading">Reuse</h2>
+    <p>
+      The corpus is assembled from published literature; each record links to its source, and
+      the terms of the underlying papers are their publishers'. Please cite the Atlas and the
+      individual sources you rely on rather than the Atlas alone.
+    </p>
+    <p class="muted">
+      Adding a field is not a breaking change and happens without notice. Removing or renaming
+      one moves the ontology version, currently {ontology.version}.
+    </p>
+    <p>
+      Something wrong, or a record missing? <a href="/suggest">propose a paper</a> or
+      <a href="/rebuild-report">report a rebuild</a>.
+    </p>
+  </section>
+</BaseLayout>
+
+<style>
+  .api-toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--line);
+    font-size: var(--text-xs);
+  }
+  .api-toc a { color: var(--accent); }
+
+  .page-zone { margin-bottom: var(--space-6); }
+  .api-lede { max-width: 72ch; color: var(--muted); font-size: var(--text-sm); }
+  .api-sub { margin: var(--space-5) 0 var(--space-2); font-size: var(--text-sm); }
+  .page-zone p { max-width: 72ch; }
+
+  .api-code {
+    margin: var(--space-3) 0;
+    padding: var(--space-3);
+    overflow-x: auto;
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: 1.6;
+    white-space: pre;
+  }
+  /* Absolute, not 0.8em: a relative size compounded inside the sample blocks and came out
+     under the floor. Mono at 14px reads about as large as sans at 16px, which is the intent
+     for a page people read rather than scan. */
+  code { font-family: var(--font-mono); font-size: var(--text-xs); }
+  .api-code code { font-size: inherit; }
+
+  .api-notes { max-width: 78ch; display: grid; gap: var(--space-2); padding-left: var(--space-4); }
+  .api-notes li { font-size: var(--text-sm); line-height: 1.6; }
+
+  .api-entity { border: 1px solid var(--line); background: var(--surface); margin-bottom: var(--space-2); }
+  .api-entity > summary {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    font-size: var(--text-xs);
+    cursor: pointer;
+  }
+  .api-entity-body { padding: 0 var(--space-3) var(--space-3); }
+  .api-sample-label { margin: var(--space-4) 0 0; color: var(--muted); font-size: var(--text-xs); }
+  .api-type { color: var(--accent-3); }
+
+  .api-relations { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .api-relations code {
+    padding: 0.1rem var(--space-2);
+    border: 1px solid var(--line);
+    background: var(--surface-alt);
+  }
+</style>

@@ -1,0 +1,148 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ScanHeader from "../components/ScanHeader.astro";
+import { authors, contributors, funding, homes } from "../data/team";
+
+/**
+ * Who built the Atlas.
+ *
+ * Square headshots on a grid, the convention the Acceleration Consortium's own team page
+ * uses, with its corners squared off to 2px to match the rest of this site rather than the
+ * circles most lab pages default to. Five of the ten people are not on that page, so they
+ * get initials instead -- a deliberate mark rather than a grey silhouette, which reads as
+ * a missing file rather than a person whose photo we do not have.
+ */
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+---
+
+<BaseLayout
+  title="Team | DIY Biofabrication Atlas"
+  description="The Human Organ Mimicry Self-Driving Lab at the Acceleration Consortium, University of Toronto, and the people who built the DIY Biofabrication Atlas."
+>
+  <ScanHeader
+    eyebrow="Human Organ Mimicry Self-Driving Lab"
+    title="Who built this"
+    description="The Atlas is curated at the Acceleration Consortium, University of Toronto. The people below are the authors of the accompanying manuscript and the colleagues credited in it."
+  />
+
+  <section class="page-zone" aria-labelledby="authors-heading">
+    <h2 class="zone-title" id="authors-heading">Authors</h2>
+    <ul class="people">
+      {authors.map((member) => (
+        <li class="person">
+          {member.photo
+            ? <img class="person-photo" src={member.photo} alt="" width="400" height="400" loading="lazy" decoding="async" />
+            : <span class="person-photo person-initials" aria-hidden="true">{initials(member.name)}</span>}
+          <p class="person-name">{member.name}</p>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="page-zone" aria-labelledby="contributors-heading">
+    <h2 class="zone-title" id="contributors-heading">Contributors</h2>
+    <p class="muted section-note">Credited in the manuscript's acknowledgements.</p>
+    <ul class="people">
+      {contributors.map((person) => (
+        <li class="person">
+          {person.photo
+            ? <img class="person-photo" src={person.photo} alt="" width="400" height="400" loading="lazy" decoding="async" />
+            : <span class="person-photo person-initials" aria-hidden="true">{initials(person.name)}</span>}
+          <p class="person-name">{person.name}</p>
+          <p class="person-contribution">{person.contribution}</p>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="page-zone" aria-labelledby="homes-heading">
+    <h2 class="zone-title" id="homes-heading">Where this work lives</h2>
+    <ul class="homes">
+      {homes.map((home) => (
+        <li>
+          <a href={home.url} target="_blank" rel="noreferrer">{home.name}</a>
+          {home.detail && <span class="muted">{home.detail}</span>}
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="page-zone" aria-labelledby="funding-heading">
+    <h2 class="zone-title" id="funding-heading">Funding</h2>
+    {funding.map((line) => <p class="funding-line">{line}</p>)}
+  </section>
+</BaseLayout>
+
+<style>
+  .page-zone { margin-bottom: var(--space-6); }
+  .section-note { max-width: 72ch; margin: 0 0 var(--space-4); font-size: var(--text-sm); }
+
+  .people {
+    display: grid;
+    /* auto-fit, not auto-fill: five people stretch across the row rather than leaving two
+       empty tracks beside them; the cap keeps a headshot near 10rem on a wide screen. */
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    max-width: 56rem;
+    gap: var(--space-4) var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .person { display: grid; align-content: start; gap: var(--space-1); }
+
+  /* Square, like the Consortium's own page, but with this site's 2px corner instead of
+     the circle a team grid usually reaches for. */
+  .person-photo {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    margin-bottom: var(--space-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+    background: var(--surface-alt);
+  }
+  .person-initials {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-size: var(--text-xl);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .person-name { margin: 0; font-size: var(--text-xs); font-weight: 700; line-height: 1.3; }
+  .person-contribution {
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--text-2xs);
+    line-height: 1.45;
+  }
+
+
+  .homes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: var(--space-2) var(--space-4);
+    max-width: 60rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .homes li {
+    display: grid;
+    gap: 0.1rem;
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--line);
+  }
+  .homes a { font-size: var(--text-xs); font-weight: 700; color: var(--accent); }
+  .homes span { font-size: var(--text-2xs); }
+
+  .funding-line { max-width: 78ch; color: var(--muted); font-size: var(--text-sm); line-height: 1.6; }
+</style>

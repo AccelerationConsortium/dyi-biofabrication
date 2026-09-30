@@ -1,0 +1,125 @@
+:root {
+  color-scheme: light;
+  --bg: oklch(0.975 0.003 210);
+  --bg-alt: oklch(0.95 0.006 210);
+  --surface: oklch(1 0 0);
+  --surface-alt: oklch(0.965 0.004 210);
+  --ink: oklch(0.2 0.015 220);
+  --muted: oklch(0.4 0.018 220);
+  --line: oklch(0.86 0.008 210);
+  --line-strong: oklch(0.64 0.012 210);
+
+  --accent: #0c6d62;
+  --accent-hover: #0a5a51;
+  --accent-soft: oklch(0.94 0.03 180);
+  --accent-2: #bb5a2a;
+  --accent-2-soft: oklch(0.94 0.04 55);
+  /* --accent-2 is tuned for marks and borders, where 3:1 is the bar. As 12-14px text
+     on --bg it measures 4.23:1, just under the 4.5:1 small text needs, so text uses
+     take this darker shade at the same hue. */
+  --accent-2-ink: oklch(0.5 0.16 45);
+  --accent-3: #284f9e;
+  --accent-3-soft: oklch(0.94 0.03 260);
+
+  --control-bg: var(--surface);
+  --control-bg-hover: var(--surface-alt);
+  --control-border: var(--line);
+  --control-border-hover: var(--line-strong);
+  --button-primary-bg: var(--ink);
+  --button-primary-bg-hover: oklch(0.27 0.018 220);
+  --button-primary-text: var(--surface);
+
+  --status-success: #0c6d62;
+  --status-warning: #bb5a2a;
+
+  --node-paper: #0c6d62;
+  --node-tool: #bb5a2a;
+  --node-topic: #284f9e;
+  --node-repo: #80612b;
+  --node-asset: #5d4db8;
+  --node-event: #a63f54;
+
+  --shadow-sm: none;
+  --shadow: 0 2px 6px oklch(0.2 0.02 220 / 0.08);
+
+  --radius-sm: 2px;
+  --radius-lg: 4px;
+
+  --content: 72rem;
+
+  --font-sans: "D-DIN", "DIN Alternate", "DIN 1451 Std", system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* 13px, the floor. Not a decorative step: it is the second most-used size in the
+     interface, for table cells, chips, counts and captions. It was 12px until readers
+     found it small; prose never uses it, only labels do. */
+  --text-2xs: 0.8125rem;
+  --text-xs: 0.875rem;
+  --text-sm: 1rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+
+
+  --control-height: 2.75rem;
+  --control-font-size: 1rem;
+  --control-font-weight: 400;
+  --control-label-size: var(--text-xs);
+  --control-label-weight: 700;
+  --control-padding-x: var(--space-3);
+  --control-radius: var(--radius-sm);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+
+  --z-sticky: 10;
+  --z-dropdown: 20;
+  --z-header: 30;
+  --z-modal: 40;
+  --z-toast: 100;
+
+  --transition: 180ms ease-out;
+  /* Sort direction on a table header. Points up for ascending; the descending rule
+     rotates it rather than carrying a second asset. */
+  --caret-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6 2 11 9 1 9Z' fill='black'/%3E%3C/svg%3E");
+  --chevron-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --focus-ring: 0 0 0 2px var(--accent);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: oklch(0.19 0.012 205);
+  --bg-alt: oklch(0.23 0.014 205);
+  --surface: oklch(0.245 0.014 205);
+  --surface-alt: oklch(0.285 0.015 205);
+  --ink: oklch(0.94 0.008 200);
+  --muted: oklch(0.75 0.014 200);
+  --line: oklch(0.37 0.015 205);
+  --line-strong: oklch(0.51 0.017 205);
+  --accent: oklch(0.74 0.11 180);
+  --accent-hover: oklch(0.8 0.1 180);
+  --accent-soft: oklch(0.31 0.045 180);
+  --accent-2: oklch(0.74 0.105 55);
+  --accent-2-soft: oklch(0.32 0.045 55);
+  --accent-2-ink: var(--accent-2);
+  --accent-3: oklch(0.72 0.1 260);
+  --accent-3-soft: oklch(0.31 0.04 260);
+  --control-bg: var(--surface);
+  --control-bg-hover: var(--surface-alt);
+  --control-border: var(--line);
+  --control-border-hover: var(--line-strong);
+  --button-primary-bg: var(--accent);
+  --button-primary-bg-hover: var(--accent-hover);
+  --button-primary-text: var(--bg);
+  --status-success: var(--accent);
+  --status-warning: var(--accent-2);
+  --shadow: 0 2px 8px oklch(0.08 0.01 205 / 0.28);
+  --focus-ring: 0 0 0 3px oklch(0.8 0.12 180 / 0.62);
+}

@@ -1,0 +1,339 @@
+.detail {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.detail-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+}
+
+.detail-main {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.record-panel {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.record-panel[hidden] {
+  display: none;
+}
+
+.record-tab-empty {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  background: var(--surface-alt);
+  font-size: var(--text-xs);
+}
+
+.detail-section {
+  scroll-margin-top: 7rem;
+}
+
+.detail-lead {
+  padding: var(--space-6);
+}
+
+.detail-block {
+  padding: 0;
+}
+
+.detail-lead h1 {
+  margin: var(--space-3) 0 var(--space-4);
+  font-size: var(--text-2xl);
+  max-width: 40ch;
+}
+
+.detail-summary {
+  max-width: 65ch;
+  font-size: var(--text-md);
+  color: var(--muted);
+}
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.evidence-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface-alt);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--ink);
+}
+
+.status-badge svg {
+  flex-shrink: 0;
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.status-badge--repo {
+  border-color: oklch(0.7 0.06 80);
+  background: var(--accent-2-soft);
+  color: var(--accent-2-ink);
+}
+
+.status-badge--workshop {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Two reading columns divided by a rule, not two cards inside a card. */
+.detail-content-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--space-6);
+}
+
+.detail-content-grid > div + div {
+  padding-left: var(--space-6);
+  border-left: 1px solid var(--line);
+}
+
+.related-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--space-6);
+}
+
+.metadata-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 0 var(--space-6);
+}
+
+.metadata-group {
+  min-width: 0;
+}
+
+.metadata-group + .metadata-group {
+  padding-left: var(--space-6);
+  border-left: 1px solid var(--line);
+}
+
+.metadata-group h2 {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.metadata-group .meta-dl > div {
+  grid-template-columns: 9rem minmax(0, 1fr);
+}
+
+/* The group's own rule follows the last row, so that row drops its border. */
+.metadata-group .meta-dl > div:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+/* Break a long DOI or URL where it must, never an ordinary word. */
+.metadata-group .meta-dl dd {
+  overflow-wrap: break-word;
+}
+
+@media (min-width: 900px) {
+  .related-grid,
+  .linked-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.detail-block h2 {
+  margin: 0 0 var(--space-4);
+  /* The shared section-heading step; this rule outranks .zone-title, so it has to agree. */
+  font-size: var(--text-lg);
+  font-family: var(--font-sans);
+  font-weight: 700;
+}
+
+.detail-block h2 + h2,
+.detail-block p + h2,
+.detail-block .chip-row + h2 {
+  margin-top: var(--space-5);
+}
+
+.detail-block p {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  max-width: 65ch;
+}
+
+.meta-dl {
+  margin: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.meta-dl > div {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.meta-dl dt {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.meta-dl dd {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.detail-block ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  font-size: var(--text-xs);
+}
+
+.detail-block ul li + li {
+  margin-top: var(--space-2);
+}
+
+/* Related records as a ruled list, one rule under each, rather than a grid of small cards. */
+.related-card {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line);
+  text-decoration: none;
+  color: inherit;
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+}
+
+.related-card:hover strong {
+  text-decoration: underline;
+}
+
+.linked-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.linked-card {
+  padding: var(--space-3);
+  text-decoration: none;
+  display: grid;
+  gap: var(--space-1);
+  transition: border-color var(--transition);
+}
+
+.related-card strong,
+.linked-card strong {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .detail-content-grid,
+  .related-grid,
+  .linked-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-content-grid > div + div {
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .detail-actions .button-link {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .meta-dl > div {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+}
+
+@media (max-width: 900px) {
+  .metadata-group + .metadata-group {
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+}
+
+/* The way back to the results.
+   Sized and coloured like a primary control rather than a breadcrumb: on a record page the
+   most likely next action is returning to the list you were comparing. */
+.detail-back {
+  justify-self: start;
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  margin-bottom: var(--space-4);
+  padding: 0 var(--space-4) 0 var(--space-3);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color var(--transition), border-color var(--transition);
+}
+
+/* Deepens its own tint rather than inverting to white-on-accent: hover shows more of
+   the colour the button already is, and the label never changes colour.
+
+   Mixed in oklab, not oklch. oklch interpolates the hue angle, and teal mixed toward a
+   near-neutral wrapped the long way round the circle -- the hover came out pink. oklab
+   has no hue angle to wrap.
+
+   8% is the ceiling: the label is accent-coloured, so every further step of tint eats
+   its contrast. Measured against the label, 8% holds 4.72:1 and 12% already fails at
+   4.45:1. The ring carries the rest of the emphasis, where it costs no contrast. */
+.detail-back:hover { text-decoration: underline; }
+
+.detail-back:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.detail-back-arrow {
+  font-size: var(--text-md);
+  line-height: 1;
+  translate: 0 -1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .detail-back { transition: none; }
+}

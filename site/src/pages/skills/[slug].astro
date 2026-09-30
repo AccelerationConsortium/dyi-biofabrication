@@ -1,0 +1,96 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import DetailShell from "../../components/DetailShell.astro";
+import AtAGlance from "../../components/AtAGlance.astro";
+import CollapsibleBlock from "../../components/CollapsibleBlock.astro";
+import PaperCard from "../../components/PaperCard.astro";
+import Pagination from "../../components/Pagination.astro";
+import { assets, papers, skills, tools } from "../../data/loaders";
+
+export function getStaticPaths() {
+  return skills.map((skill) => ({
+    params: { slug: skill.slug },
+    props: { skill }
+  }));
+}
+
+const { skill } = Astro.props;
+const linkedPapers = papers.filter((paper) => skill.paperIds.includes(paper.id));
+const linkedTools = tools.filter((tool) => skill.toolIds.includes(tool.id));
+const linkedAssets = assets.filter((asset) => skill.assetIds.includes(asset.id));
+const formatLevel = (value: string) => `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+const levelLabel = skill.skillLevels.map(formatLevel).join(", ");
+---
+
+<BaseLayout title={`${skill.name} | Skills | DIY Biofabrication Atlas`} description={`${skill.paperCount} papers and ${skill.toolCount} tools requiring ${skill.name}.`}>
+  <DetailShell breadcrumb={[{ label: "Skills", href: "/skills" }, { label: skill.name }]}>
+    <section class="panel detail-lead">
+      <div class="chip-row">
+        <span class="chip">{skill.kind === "level" ? "Barrier level" : "Technical tag"}</span>
+        <span class="chip">{skill.paperCount} papers</span>
+        <span class="chip">{skill.toolCount} tools</span>
+      </div>
+      <h1>{skill.name}</h1>
+      <p class="detail-summary muted">
+        {skill.kind === "level"
+          ? "Systems grouped by derived engineering and skill barrier from corpus metadata."
+          : "Technical skill tag aggregated from paper records across the atlas."}
+      </p>
+    </section>
+
+    <AtAGlance
+      items={[
+        { label: "Papers", value: String(skill.paperCount) },
+        { label: "Tools", value: String(skill.toolCount) },
+        { label: "Assets", value: String(linkedAssets.length) },
+        { label: "Levels", value: levelLabel || "—" }
+      ]}
+    />
+
+    {linkedTools.length > 0 && (
+      <section class="page-zone">
+        <h2 class="zone-title">Linked tools</h2>
+        <div class="chip-scroller">
+          {linkedTools.map((tool) => (
+            <a class="chip" href={`/tools/${tool.slug}`}>{tool.name}</a>
+          ))}
+        </div>
+      </section>
+    )}
+
+    <section class="explorer-grid cols-3" id="skill-papers-preview-grid">
+      {linkedPapers.map((paper) => <PaperCard paper={paper} />)}
+    </section>
+    <Pagination id="skill-papers-preview-pagination" />
+
+    <CollapsibleBlock title="All linked papers">
+      <div class="explorer-grid cols-3" id="skill-papers-grid">
+        {linkedPapers.map((paper) => <PaperCard paper={paper} />)}
+      </div>
+      <Pagination id="skill-papers-pagination" />
+    </CollapsibleBlock>
+  </DetailShell>
+  <script>
+    import { initGridPagination } from "../../scripts/pagination.mjs";
+
+    initGridPagination({
+      gridId: "skill-papers-preview-grid",
+      itemSelector: ".paper-card",
+      navId: "skill-papers-preview-pagination",
+      pageSize: 24
+    });
+    initGridPagination({
+      gridId: "skill-papers-grid",
+      itemSelector: ".paper-card",
+      navId: "skill-papers-pagination",
+      pageSize: 24
+    });
+  </script>
+</BaseLayout>
+
+<style>
+  .zone-title {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-md);
+  }
+</style>

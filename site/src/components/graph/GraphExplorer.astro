@@ -1,0 +1,137 @@
+---
+export interface Props {
+  graph: import("../data/types").GraphData;
+  variant?: "full" | "compact";
+  idPrefix?: string;
+}
+
+import Pagination from "../Pagination.astro";
+
+const { graph, variant = "full", idPrefix = "graph" } = Astro.props;
+const types = ["paper", "tool", "repo", "asset"] as const;
+const totalNodes =
+  graph.counts.papers +
+  graph.counts.tools +
+  graph.counts.topics +
+  graph.counts.repos +
+  graph.counts.assets;
+const id = (name: string) => `${idPrefix}-${name}`;
+---
+
+<div
+  class:list={["graph-page", variant === "compact" && "graph-page--compact"]}
+  data-graph-prefix={idPrefix}
+  data-graph-variant={variant}
+>
+  {variant !== "compact" && (
+  <div class="graph-toolbar panel">
+    <label class="control-field graph-search">
+      <span class="sr-only">Search nodes</span>
+      <input id={id("filter")} type="search" placeholder="Search nodes…" autocomplete="off" title="Dim every node whose name does not match" />
+    </label>
+    <div class="graph-type-chips" role="group" aria-label="Filter by type">
+      {types.map((t) => (
+        <button
+          type="button"
+          class="graph-type-chip"
+          data-type={t}
+          aria-pressed="false"
+          style={`--chip-color: var(--node-${t})`}
+          title={`Show or hide ${t} nodes`}
+        >
+          <span class="graph-type-dot" aria-hidden="true"></span>
+          {t}
+        </button>
+      ))}
+    </div>
+    <div class="graph-score-controls" role="group" aria-label="Filter papers by assessment score">
+      <label class="graph-score-filter">
+        <span>Criterion</span>
+        <select id={id("criterion")} title="Keep only papers scored on this rubric criterion">
+          <option value="">All papers</option>
+          {graph.criteria.map((criterion) => <option value={criterion.id}>{criterion.name}</option>)}
+        </select>
+      </label>
+      <label class="graph-score-filter graph-score-filter--min">
+        <span>Minimum</span>
+        <select id={id("min-score")} title="Lowest score to keep, out of 5">
+          <option value="">Any</option>
+          {[1, 2, 3, 4, 5].map((score) => <option value={String(score)}>{score}+</option>)}
+        </select>
+      </label>
+    </div>
+    <span id={id("counts")} class="graph-counts muted" title="Nodes and edges currently shown">{totalNodes} nodes · {graph.counts.edges} edges</span>
+  </div>
+  )}
+
+  <div class="graph-workspace">
+    <section class="graph-canvas-wrap">
+      <canvas
+        id={id("canvas")}
+        role="application"
+        aria-label="Animated knowledge graph. Drag background to pan, drag nodes to reposition. Click to inspect, double-click to open."
+      ></canvas>
+    </section>
+
+    {variant !== "compact" && (
+    <aside class="panel graph-rail" aria-label="Graph sidebar">
+      <details class="graph-rail-section graph-selection-panel" id={id("selection-panel")} open>
+        <summary class="graph-rail-summary">
+          <span class="graph-rail-summary-label" title="The node last clicked or hovered">Selection</span>
+        </summary>
+        <div class="graph-rail-section-body graph-rail-section-body--selection">
+          <div class="graph-selection-stack">
+            <div id={id("focus-meta")} class="graph-focus-body"></div>
+            <div id={id("relations")} class="graph-relations"></div>
+            <p id={id("live")} class="graph-live" aria-live="polite"></p>
+          </div>
+        </div>
+      </details>
+
+      {variant !== "compact" && (
+        <details class="graph-rail-section graph-nodes-panel" id={id("nodes-panel")}>
+          <summary class="graph-rail-summary">
+            <span class="graph-rail-summary-label">Nodes</span>
+            <span id={id("list-count")} class="graph-list-count muted"></span>
+          </summary>
+          <div class="graph-rail-section-body graph-rail-section-body--nodes">
+            <div id={id("node-list")} class="graph-node-list" role="listbox" aria-label="Filtered graph nodes"></div>
+            <Pagination id={id("node-pagination")} label="Graph nodes pagination" class="graph-node-pagination" />
+          </div>
+        </details>
+      )}
+    </aside>
+    )}
+  </div>
+</div>
+
+<script id={id("data")} type="application/json" set:html={JSON.stringify(graph)}></script>
+
+<script>
+  import { initGraphView } from "../../scripts/graph-view.mjs";
+
+  document.querySelectorAll(".graph-page[data-graph-prefix]").forEach((root) => {
+    const idPrefix = root.dataset.graphPrefix || "graph";
+    const variant = root.dataset.graphVariant || "full";
+    const id = (name) => `${idPrefix}-${name}`;
+    const graphData = JSON.parse(document.getElementById(id("data"))?.textContent || "{}");
+
+    initGraphView(graphData, {
+      canvasEl: document.getElementById(id("canvas")),
+      nodeListEl: document.getElementById(id("node-list")),
+      nodePaginationId: variant === "compact" ? "" : id("node-pagination"),
+      listCountEl: document.getElementById(id("list-count")),
+      relationsEl: document.getElementById(id("relations")),
+      focusMetaEl: document.getElementById(id("focus-meta")),
+      liveEl: document.getElementById(id("live")),
+      countsEl: document.getElementById(id("counts")),
+      filterInput: document.getElementById(id("filter")),
+      criterionSelect: document.getElementById(id("criterion")),
+      minScoreSelect: document.getElementById(id("min-score")),
+      typeChips: [...root.querySelectorAll(".graph-type-chip")],
+      selectionPanel: document.getElementById(id("selection-panel")),
+      nodesPanel: document.getElementById(id("nodes-panel")),
+      syncUrl: variant !== "compact"
+    });
+  });
+</script>

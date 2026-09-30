@@ -1,0 +1,73 @@
+---
+import Icon from "./Icon.astro";
+
+export interface Props {
+  breadcrumb?: { label: string; href?: string }[];
+  /**
+   * A prominent way out, for pages people arrive at from a filtered list. Rendered as a
+   * button rather than a breadcrumb crumb, because getting back to the results is the most
+   * likely next action on a record page and it should not be the smallest thing on it.
+   */
+  back?: { href: string; label: string };
+}
+
+const { breadcrumb = [], back } = Astro.props;
+---
+
+<article class="detail">
+  {back && (
+    <a class="detail-back" href={back.href} data-detail-back>
+      <span class="detail-back-arrow" aria-hidden="true">←</span>
+      {back.label}
+    </a>
+  )}
+  {breadcrumb.length > 0 && (
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      {breadcrumb.map((item, i) => (
+        <>
+          {i > 0 && <span aria-hidden="true">→</span>}
+          {item.href ? <a href={item.href}>{item.label}</a> : <span>{item.label}</span>}
+        </>
+      ))}
+    </nav>
+  )}
+  <slot />
+</article>
+
+{back && (
+  <script>
+    // Return to wherever this page was opened from. The catalogue keeps its facets, sort
+    // and view in the URL and the browser remembers the scroll position, so going back
+    // restores all of it -- which a fixed link never could. Any same-origin page counts:
+    // the list of papers, the graph, the home page, another record. The href is the
+    // fallback for a cold arrival, and is what the status bar and "open in new tab" see.
+    //
+    // This used to check for pathname "/" -- the catalogue's address before it moved to
+    // /browse -- so the button had quietly stopped going back at all.
+    const link = document.querySelector("[data-detail-back]");
+    const LABELS = {
+      "/browse": "All builds",
+      "/graph": "The graph",
+      "/": "Home"
+    };
+    if (link && document.referrer && history.length > 1) {
+      try {
+        const from = new URL(document.referrer);
+        if (from.origin === window.location.origin && from.pathname !== window.location.pathname) {
+          const label = LABELS[from.pathname.replace(/\/$/, "") || "/"];
+          if (label) {
+            const text = link.childNodes[link.childNodes.length - 1];
+            if (text && text.nodeType === Node.TEXT_NODE) text.textContent = ` ${label}`;
+          }
+          link.addEventListener("click", (event) => {
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+            event.preventDefault();
+            history.back();
+          });
+        }
+      } catch {
+        /* an unparseable referrer just leaves the plain link in place */
+      }
+    }
+  </script>
+)}

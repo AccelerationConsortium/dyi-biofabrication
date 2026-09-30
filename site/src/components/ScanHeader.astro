@@ -1,0 +1,26 @@
+---
+export interface Props {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  statValue?: string;
+  statLabel?: string;
+  compact?: boolean;
+}
+
+const { eyebrow, title, description, statValue, statLabel, compact = false } = Astro.props;
+---
+
+<header class:list={["scan-header", compact && "scan-header--compact"]}>
+  <div class="scan-header-copy">
+    {eyebrow && <span class="eyebrow">{eyebrow}</span>}
+    <h1>{title}</h1>
+    {description && <p class="scan-header-intro muted">{description}</p>}
+  </div>
+  {statValue && (
+    <div class="stat-pill panel" aria-label={`${statValue} ${statLabel ?? ""}`}>
+      <strong>{statValue}</strong>
+      {statLabel && <span class="muted">{statLabel}</span>}
+    </div>
+  )}
+</header>

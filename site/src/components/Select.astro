@@ -1,0 +1,65 @@
+---
+export interface SelectOption {
+  value: string;
+  label: string;
+  selected?: boolean;
+}
+
+export interface Props {
+  id: string;
+  label?: string;
+  options: SelectOption[];
+  srOnlyLabel?: boolean;
+  class?: string;
+}
+
+const { id, label, options, srOnlyLabel = false, class: className = "" } = Astro.props;
+const selected = options.find((o) => o.selected) ?? options[0];
+---
+
+<div class={`select-control ${className}`.trim()} data-select-root>
+  {label && (
+    <span class:list={["control-label", srOnlyLabel && "sr-only"]} id={`${id}-label`}>
+      {label}
+    </span>
+  )}
+  <div class="select-wrap">
+    <button
+      type="button"
+      class="select-trigger"
+      id={`${id}-trigger`}
+      aria-haspopup="listbox"
+      aria-expanded="false"
+      aria-labelledby={label ? `${id}-label` : undefined}
+      aria-controls={`${id}-listbox`}
+    >
+      <span class="select-value" data-select-value>{selected?.label ?? "Select"}</span>
+      <svg class="select-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    </button>
+    <ul class="select-listbox" id={`${id}-listbox`} role="listbox" tabindex="-1" hidden>
+      {options.map((option, i) => (
+        <li
+          role="option"
+          class="select-option"
+          data-value={option.value}
+          aria-selected={option.selected ? "true" : "false"}
+          id={`${id}-opt-${i}`}
+        >
+          {option.label}
+        </li>
+      ))}
+    </ul>
+    <select class="select-native sr-only" id={id} tabindex="-1" aria-hidden="true">
+      {options.map((option) => (
+        <option value={option.value} selected={option.selected}>{option.label}</option>
+      ))}
+    </select>
+  </div>
+</div>
+
+<script>
+  import { initSelectControls } from "../scripts/select-control.mjs";
+  initSelectControls();
+</script>

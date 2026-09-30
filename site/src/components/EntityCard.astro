@@ -1,0 +1,46 @@
+---
+export interface Props {
+  href: string;
+  title: string;
+  description?: string;
+  chips?: string[];
+  extraChips?: string[];
+}
+
+const { href, title, description, chips = [], extraChips = [] } = Astro.props;
+const excerpt = description || "";
+---
+
+<article class="panel entity-card">
+  <div class="card-body">
+    {chips.length > 0 && (
+      <div class="chip-row">
+        {chips.slice(0, 3).map((chip) => <span class="chip">{chip}</span>)}
+      </div>
+    )}
+    <h3 class="card-title">
+      <a href={href}>{title}</a>
+    </h3>
+    {excerpt && <p class="muted card-excerpt">{excerpt}</p>}
+    {(extraChips.length > 0 || chips.length > 3) && (
+      <details class="card-expand">
+        <summary class="card-expand-summary">More</summary>
+        <div class="card-expand-body">
+          {excerpt && <p class="muted">{excerpt}</p>}
+          <div class="chip-row">
+            {chips.map((chip) => <span class="chip">{chip}</span>)}
+            {extraChips.map((chip) => <span class="chip">{chip}</span>)}
+          </div>
+        </div>
+      </details>
+    )}
+  </div>
+</article>
+
+<style>
+  .entity-card {
+    overflow: hidden;
+    transition: border-color var(--transition);
+  }
+
+</style>

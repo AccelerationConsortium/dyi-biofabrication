@@ -1,0 +1,15 @@
+.env
+.DS_Store
+*.pdf
+downloaded_papers/
+pdfs/
+docs/pageindex-wiki/
+pageindex/results/
+site/node_modules/
+site/dist/
+site/.astro/
+site/public/artifacts/
+site/src/data/generated/
+__pycache__/
+pdfs/markdown/
+pdfs/repo_boms/

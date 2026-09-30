@@ -1,0 +1,22 @@
+# DIY Biofabrication Atlas
+
+DIY Biofabrication Atlas is a static, machine-readable atlas of open and low-cost biofabrication, liquid-handling, and adjacent lab automation papers, tools, repos, assets, and event contexts.
+
+## Start here
+- /api/index.json
+- /api/ontology.json
+- /api/graph.json
+- /api/papers.json
+- /api/tools.json
+- /api/repos.json
+- /api/topics.json
+- /api/assets.json
+- /api/events.json
+- /api/collections.json
+
+## Notes for LLM consumers
+- Prefer `/api/index.json` to discover the dataset.
+- Use `/api/ontology.json` for entity definitions, relation labels, and controlled fields.
+- `provenanceSource` on asset and event records distinguishes curated manifest entries from heuristic extraction.
+- `notes` on curated asset and event records capture provenance caveats.
+- Paper records expose metadata and Atlas relationships without local file paths or parsed PDF text.

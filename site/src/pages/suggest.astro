@@ -1,0 +1,581 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ScanHeader from "../components/ScanHeader.astro";
+import { criteriaRubric, criteriaStats, papers, screening, stats } from "../data/loaders";
+import { githubRepo, githubRepoUrl } from "../config/site";
+import { FILE_TYPES } from "../data/file-types";
+import { METRICS } from "../data/metrics";
+import { holdings } from "../data/corpus-gaps";
+
+/**
+ * Propose a paper, in six steps. Everything the corpus records for a build is asked for
+ * here, in the order a curator needs it: the paper, what is open, supplementary material
+ * to review, the performance the paper reports, the submitter's own rubric scores (kept
+ * apart as proposals until a curator validates them), then review and hand-off to a
+ * pre-filled GitHub issue. The step logic lives in ../scripts/suggest-record.mjs.
+ */
+
+/** What qualifies, against what was set aside; the right-hand groups are the screening table's. */
+const QUALIFIES: [string, string[]][] = [
+  [
+    "The primary description of a piece of open-source hardware",
+    ["Review or perspective", "Preprint superseded by a published version"]
+  ],
+  [
+    "An instrument for biofabrication: a bioprinter, liquid handler, bioreactor or microfluidic fabrication method",
+    ["Pumps and fluid components", "Microscopy and imaging", "Prosthetics and bionics"]
+  ],
+  [
+    "Or the laboratory automation that serves it",
+    ["Laboratory automation outside biofabrication", "Adjacent hardware, not a biofabrication build"]
+  ],
+  ["Documented so another laboratory could build it: parts, files, steps", ["Software only"]]
+];
+
+const areas = [...new Set(papers.flatMap((paper) => paper.category))].filter(Boolean).sort();
+
+/** The rubric has anchors for three techniques; each area maps onto the closest one. */
+const TECHNIQUES = ["Bioprinting", "Liquid Handling", "Microfabrication"];
+const areaTechnique: Record<string, string> = {
+  Bioprinting: "Bioprinting",
+  "Custom Printer": "Bioprinting",
+  Electrospinning: "Bioprinting",
+  "Liquid Handling": "Liquid Handling",
+  "Bioreactors & Cell Culture": "Liquid Handling",
+  "Microscopy & Imaging": "Liquid Handling",
+  Microfabrication: "Microfabrication",
+  Microfluidics: "Microfabrication",
+  "Organ-on-chip": "Microfabrication"
+};
+
+const statById = new Map(criteriaStats.map((s) => [s.id, s]));
+const SHORT_OVERRIDE: Record<string, string> = {
+  "equipment-consumable-facility-requirement-accessibility": "Equipment access",
+  "application-level": "Application range",
+  "build-time": "Build time"
+};
+const criteria = criteriaRubric.map((criterion) => {
+  const stat = statById.get(criterion.id);
+  return {
+    id: criterion.id,
+    name: criterion.name,
+    short: SHORT_OVERRIDE[criterion.id] || stat?.shortName || criterion.name,
+    description: criterion.description,
+    shown: stat?.display ?? true,
+    scored: stat?.scoredCount ?? 0,
+    // { Bioprinting: { extract, anchors: ["…", …5] }, … }
+    anchors: Object.fromEntries(
+      criterion.technologies.map((t) => [
+        t.type,
+        { extract: t.informationToExtract, anchors: t.scores.map((s) => s.anchor) }
+      ])
+    )
+  };
+});
+
+const LICENCES = [
+  "CC-BY-4.0",
+  "CC-BY-SA-4.0",
+  "CERN-OHL-S-2.0",
+  "CERN-OHL-W-2.0",
+  "CERN-OHL-P-2.0",
+  "GPL-3.0",
+  "MIT",
+  "Apache-2.0",
+  "TAPR-OHL",
+  "Other, stated in the paper or repository",
+  "Not stated anywhere"
+];
+const CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD", "CHF", "Other"];
+const SI_KINDS = [
+  "Bill of materials",
+  "CAD or design files",
+  "Build instructions",
+  "Protocol",
+  "Software or firmware",
+  "Supplementary figures and methods",
+  "Data",
+  "Other"
+];
+const ROLES = [
+  ["author", "I am an author of the paper"],
+  ["builder", "I have built or used the design"],
+  ["reader", "I read the paper"]
+];
+
+const steps = [
+  { id: "paper", label: "The paper" },
+  { id: "open", label: "What is open" },
+  { id: "si", label: "Supplementary files" },
+  { id: "performance", label: "Reported performance" },
+  { id: "scores", label: "Your scores" },
+  { id: "review", label: "Review & send" }
+];
+---
+
+<BaseLayout
+  title="Propose a paper | DIY Biofabrication Atlas"
+  description="Propose a paper describing an open biofabrication build, attach its supplementary files for review, and suggest rubric scores for the curators to validate."
+>
+  <ScanHeader
+    eyebrow="Community submission"
+    title="Propose a paper for the atlas."
+    description="Six short steps; a title, an area and a description are enough to start. At the end you review a draft and open a GitHub issue pre-filled with it. Nothing leaves this tab before then."
+  />
+
+  <div class="propose-layout">
+  <aside class="propose-rail">
+  <div class="panel qualifies-note">
+    <p class="qualifies-title">What qualifies</p>
+    <div class="table-scroll">
+      <table class="data-table qualifies-table">
+        <thead>
+          <tr>
+            <th scope="col">Qualifies</th>
+            <th scope="col">Set aside</th>
+          </tr>
+        </thead>
+        <tbody>
+          {QUALIFIES.map(([yes, no]) => (
+            <tr>
+              <td>{yes}</td>
+              <td>{no.join("; ")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="qualifies-foot">{screening.kept} of {screening.screened} screened papers met the rule; <a href="/about#inclusion">the papers set aside are listed on the About page.</a> Already in the index? <a href={`${githubRepoUrl}/issues/new?template=complete-record.yml`}>Fill a gap in a record</a> instead.</p>
+  </div>
+
+  <div class="panel access-note">
+    <strong>Note:</strong> this repository is currently private. Opening the issue only works if your GitHub account
+    has access to <a href={githubRepoUrl} target="_blank" rel="noreferrer">{githubRepo}</a>. Without access, use
+    <em>Copy details</em> on the last step and send the text, with any files, to the maintainers.
+  </div>
+  </aside>
+
+  <form id="suggest-form" class="propose" novalidate data-steps={steps.length}>
+    <ol class="steps" aria-label="Steps">
+      {steps.map((step, i) => (
+        <li class="step" data-step-tab={i + 1}>
+          <button type="button" class="step-button" data-go={i + 1} aria-current={i === 0 ? "step" : undefined} title={`Step ${i + 1}: ${step.label}`}>
+            <span class="step-num">{i + 1}</span>
+            <span class="step-label">{step.label}</span>
+          </button>
+        </li>
+      ))}
+    </ol>
+
+    <p id="suggest-status" class="form-status" aria-live="polite"></p>
+
+    <!-- 1 · The paper -->
+    <fieldset class="panel step-panel" data-step="1">
+      <legend class="step-title"><span class="step-kicker">Step 1 of {steps.length}</span>The paper</legend>
+      <div class="form-grid">
+        <label class="control-field span-2">
+          <span class="control-label">Paper title *</span>
+          <input id="p-title" type="text" required autocomplete="off" placeholder="As published" />
+        </label>
+        <label class="control-field">
+          <span class="control-label">DOI</span>
+          <input id="p-doi" type="text" placeholder="10.xxxx/…" />
+        </label>
+        <label class="control-field">
+          <span class="control-label">Journal and year</span>
+          <input id="p-venue" type="text" placeholder="e.g. HardwareX, 2023" />
+        </label>
+        <label class="control-field">
+          <span class="control-label">Application area *</span>
+          <select id="p-area" required>
+            <option value="">Choose…</option>
+            {areas.map((area) => <option value={area} data-technique={areaTechnique[area] || "Bioprinting"}>{area}</option>)}
+            <option value="Other" data-technique="Bioprinting">Other</option>
+          </select>
+        </label>
+        <label class="control-field">
+          <span class="control-label">Name of the instrument</span>
+          <input id="p-tool" type="text" placeholder="e.g. Replistruder 4, if it has one" />
+        </label>
+        <label class="control-field span-2">
+          <span class="control-label">What it is and what it does *</span>
+          <textarea id="p-description" rows="4" required placeholder="One paragraph: the instrument, the process it performs, what it replaces."></textarea>
+        </label>
+        <label class="control-field span-2">
+          <span class="control-label">Why it belongs in the index</span>
+          <textarea id="p-why" rows="2" placeholder="Why this paper is the primary description of a build someone else could attempt."></textarea>
+        </label>
+        <fieldset class="control-field span-2 choice-set">
+          <legend class="control-label">Your relation to the paper</legend>
+          <div class="choice-row">
+            {ROLES.map(([value, label]) => (
+              <label class="control-toggle"><input type="radio" name="p-role" value={value} /><span>{label}</span></label>
+            ))}
+          </div>
+        </fieldset>
+      </div>
+    </fieldset>
+
+    <!-- 2 · What is open -->
+    <fieldset class="panel step-panel" data-step="2" hidden>
+      <legend class="step-title"><span class="step-kicker">Step 2 of {steps.length}</span>What is open</legend>
+      <p class="step-lead">These are the fields most records in the index lack. If you are an author, you know them and the paper's readers do not.</p>
+      <div class="form-grid">
+        <label class="control-field span-2">
+          <span class="control-label">Design files: repository or deposit</span>
+          <input id="o-repo" type="url" placeholder="https://github.com/… or a Zenodo / Mendeley Data DOI" />
+        </label>
+        <label class="control-field">
+          <span class="control-label">Licence on the design files</span>
+          <select id="o-licence">
+            <option value="">Not sure</option>
+            {LICENCES.map((l) => <option value={l}>{l}</option>)}
+          </select>
+        </label>
+        <label class="control-field">
+          <span class="control-label">Skill needed to build it</span>
+          <select id="o-skill">
+            <option value="">Not sure</option>
+            <option value="Low">Low: assemble bought parts, run supplied code</option>
+            <option value="Medium">Medium: some machining, soldering or firmware edits</option>
+            <option value="High">High: custom electronics, precision alignment or software work</option>
+          </select>
+        </label>
+        <fieldset class="control-field span-2 choice-set">
+          <legend class="control-label">Files the paper or repository provides</legend>
+          <div class="choice-row">
+            {FILE_TYPES.map((t) => (
+              <label class="control-toggle" title={t.title}><input type="checkbox" name="o-files" value={t.label} /><span>{t.label}</span></label>
+            ))}
+          </div>
+        </fieldset>
+        <div class="cost-field span-2">
+          <span class="control-label">Cost to build</span>
+          <div class="cost-row">
+            <input id="o-cost" type="text" inputmode="decimal" placeholder="e.g. 830" aria-label="Amount" />
+            <span class="control-field">
+              <select id="o-currency" aria-label="Currency">
+                {CURRENCIES.map((c) => <option value={c}>{c}</option>)}
+              </select>
+            </span>
+            <input id="o-cost-note" type="text" placeholder="What it covers, e.g. excluding the OT-2 it mounts on" aria-label="What the cost covers" />
+          </div>
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- 3 · Supplementary files -->
+    <fieldset class="panel step-panel" data-step="3" hidden>
+      <legend class="step-title"><span class="step-kicker">Step 3 of {steps.length}</span>Supplementary files for review</legend>
+      <p class="step-lead">
+        Bills of materials, build instructions and design files often sit in the supplementary information
+        rather than the article. List each item here; a curator reads them when validating the record.
+        Link to a deposit or the publisher's page where you can. Files you hold only locally can be dragged
+        into the <em>Supplementary files</em> box of the GitHub issue once it opens (25 MB per file, and they
+        become public with the issue).
+      </p>
+      <ol id="si-list" class="si-list" aria-label="Supplementary items">
+        <li class="si-row">
+          <select class="si-kind" aria-label="What the file holds">
+            <option value="">What it holds…</option>
+            {SI_KINDS.map((k) => <option value={k}>{k}</option>)}
+          </select>
+          <input class="si-link" type="url" placeholder="Link or DOI, if it is online" aria-label="Link" />
+          <input class="si-note" type="text" placeholder="File name or what to look for, e.g. mmc1.pdf, Table S2" aria-label="Note" />
+          <button type="button" class="si-remove" aria-label="Remove this item">×</button>
+        </li>
+      </ol>
+      <div class="si-actions">
+        <button type="button" id="si-add" class="button-link secondary">Add another item</button>
+        <label class="control-toggle"><input type="checkbox" id="si-attach" /><span>I will attach files to the issue</span></label>
+      </div>
+      <template id="si-template">
+        <li class="si-row">
+          <select class="si-kind" aria-label="What the file holds">
+            <option value="">What it holds…</option>
+            {SI_KINDS.map((k) => <option value={k}>{k}</option>)}
+          </select>
+          <input class="si-link" type="url" placeholder="Link or DOI, if it is online" aria-label="Link" />
+          <input class="si-note" type="text" placeholder="File name or what to look for" aria-label="Note" />
+          <button type="button" class="si-remove" aria-label="Remove this item">×</button>
+        </li>
+      </template>
+    </fieldset>
+
+    <!-- 4 · Reported performance -->
+    <fieldset class="panel step-panel" data-step="4" hidden>
+      <legend class="step-title"><span class="step-kicker">Step 4 of {steps.length}</span>Performance the paper reports</legend>
+      <p class="step-lead">
+        The five measurements a laboratory needs before adopting a build. Give the value the paper states
+        and where it states it; leave a row blank if the paper does not report it. Only {holdings.againstStandard} of the {holdings.total} records report against a written standard, so name the standard if one was used.
+      </p>
+      <div class="metric-grid" role="group" aria-label="Reported performance">
+        <span class="metric-head">Measurement</span>
+        <span class="metric-head">Value stated</span>
+        <span class="metric-head">Where in the paper</span>
+        {METRICS.map((m) => (
+          <>
+            <span class="metric-name">{m.label}</span>
+            <input type="text" id={`m-${m.id}-value`} data-metric={m.id} data-part="value" placeholder={m.id === "standard-compliance" ? "e.g. ISO 8655-2" : m.id === "unattended-operation" ? "e.g. 12 h runs" : "e.g. 95 % at 24 h"} aria-label={`${m.label}: value`} />
+            <input type="text" id={`m-${m.id}-where`} data-metric={m.id} data-part="where" placeholder="Section, figure or table" aria-label={`${m.label}: where stated`} />
+          </>
+        ))}
+      </div>
+    </fieldset>
+
+    <!-- 5 · Rubric scores -->
+    <fieldset class="panel step-panel" data-step="5" hidden>
+      <legend class="step-title"><span class="step-kicker">Step 5 of {steps.length}</span>Your scores, for validation</legend>
+      <p class="step-lead">
+        Every record is scored 1–5 on the same ten criteria by a curator reading the paper. You can
+        propose scores here; they are filed as <strong>submitter proposals</strong> and appear on the
+        site only after a curator has checked them against the paper. Pick the anchor that fits and say
+        what in the paper supports it.
+      </p>
+      <label class="control-field technique-field">
+        <span class="control-label">Anchors shown for</span>
+        <select id="s-technique">
+          {TECHNIQUES.map((t) => <option value={t}>{t}</option>)}
+        </select>
+      </label>
+      <ol class="score-list">
+        {criteria.map((c) => (
+          <li class="score-row" data-criterion={c.id} data-anchors={JSON.stringify(c.anchors)}>
+            <div class="score-head">
+              <span class="score-name">{c.short}</span>
+              <span class="score-desc">{c.description}{!c.shown && " Not shown on the site yet: the corpus has too few scores to compare."}</span>
+            </div>
+            <div class="score-pick" role="radiogroup" aria-label={`${c.name}: score`}>
+              {[1, 2, 3, 4, 5].map((v) => (
+                <label class="control-toggle score-toggle"><input type="radio" name={`s-${c.id}`} value={String(v)} /><span>{v}</span></label>
+              ))}
+              <button type="button" class="score-clear" data-clear={`s-${c.id}`}>Clear</button>
+            </div>
+            <p class="score-anchor" data-anchor-for={c.id}>Choose a score to see its anchor.</p>
+            <input type="text" class="score-why" id={`s-${c.id}-why`} placeholder="What supports it, e.g. 100 µm filaments, Fig. 3" aria-label={`${c.name}: evidence`} />
+          </li>
+        ))}
+      </ol>
+    </fieldset>
+
+    <!-- 6 · Review -->
+    <fieldset class="panel step-panel" data-step="6" hidden>
+      <legend class="step-title"><span class="step-kicker">Step 6 of {steps.length}</span>Review and send</legend>
+      <p class="step-lead">This is the text the GitHub issue will carry. Go back to any step to change it.</p>
+      <pre id="suggest-preview" tabindex="0"></pre>
+      <div class="confirm-set">
+        <label class="control-toggle confirm-toggle"><input type="checkbox" id="c-links" /><span>I checked that the links resolve to this paper and its files.</span></label>
+        <label class="control-toggle confirm-toggle"><input type="checkbox" id="c-scores" /><span>I understand that scores and performance values are proposals until a curator validates them.</span></label>
+      </div>
+      <div class="review-actions">
+        <button id="copy-details" class="button-link secondary" type="button">Copy details</button>
+        <a id="open-issue" class="button-link" href={`${githubRepoUrl}/issues/new`} target="_blank" rel="noreferrer" aria-disabled="true">Open GitHub issue</a>
+        <button id="suggest-reset" class="button-link ghost" type="button">Clear the form</button>
+      </div>
+      <p class="muted privacy-note">Opening the issue sends the draft above to GitHub. Until then it is kept only in this browser tab, so a reload does not lose it.</p>
+    </fieldset>
+
+    <div class="step-nav">
+      <button type="button" id="step-back" class="button-link secondary">Back</button>
+      <span id="step-count" class="muted step-count"></span>
+      <button type="button" id="step-next" class="button-link">Next</button>
+    </div>
+  </form>
+
+  </div>
+
+  <script>
+    import { initSuggestForm } from "../scripts/suggest-record.mjs";
+    initSuggestForm();
+  </script>
+</BaseLayout>
+
+<style>
+  .qualifies-note { margin-bottom: var(--space-3); padding: var(--space-3) var(--space-4); font-size: var(--text-xs); line-height: 1.5; }
+  .qualifies-foot { font-size: var(--text-sm); }
+  .qualifies-title { margin: 0 0 var(--space-2); font-weight: 700; font-size: var(--text-sm); }
+  .qualifies-table { width: 100%; }
+  .qualifies-table th, .qualifies-table td { width: 50%; vertical-align: top; }
+  .qualifies-table td:first-child { color: var(--ink); }
+  .qualifies-table td:last-child { color: var(--muted); }
+  .qualifies-foot { margin: var(--space-3) 0 0; }
+  .qualifies-note a, .access-note a { color: var(--accent); }
+  .access-note {
+    padding: var(--space-3) var(--space-4);
+    margin: 0;
+    font-size: var(--text-sm);
+    border-color: color-mix(in oklab, var(--accent-2) 30%, var(--line));
+  }
+
+  /* Form on the left, the rule and the access note in a rail on the right, so the page is one
+     working surface rather than a full-width band over a half-width form. */
+  /* The header intro may run as wide as the form column, so it takes two lines rather than four. */
+  :global(.scan-header-intro) { max-width: 75ch; }
+  .propose-layout { display: grid; grid-template-columns: minmax(0, 52rem); gap: var(--space-6); align-items: start; }
+  .propose { min-width: 0; }
+  .propose-rail { min-width: 0; }
+  @media (min-width: 1100px) {
+    .propose-layout { grid-template-columns: minmax(0, 52rem) minmax(18rem, 1fr); }
+    .propose { grid-column: 1; grid-row: 1; }
+    .propose-rail { grid-column: 2; grid-row: 1; position: sticky; top: calc(var(--control-height) + var(--space-8)); }
+    /* In the rail there is no room for two columns: each row stacks, the rule in ink and the
+       set-aside line beneath it. The header row stays for screen readers only. */
+    .qualifies-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .qualifies-table, .qualifies-table tbody, .qualifies-table tr, .qualifies-table td { display: block; width: auto; }
+    .qualifies-table tr { padding: var(--space-2) 0; border-top: 1px solid var(--line); }
+    .qualifies-table tr:last-child { border-bottom: 1px solid var(--line); }
+    .qualifies-table td { padding: 0; border: 0; }
+    .qualifies-table td:last-child { margin-top: 2px; font-size: var(--text-2xs); }
+    .qualifies-table td:last-child::before { content: "Not: "; font-weight: 700; }
+  }
+
+  /* Step indicator */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--space-1);
+    margin: 0 0 var(--space-3);
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+  }
+  .step-button {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--space-2) var(--space-2);
+    border: 0;
+    border-top: 2px solid var(--line);
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--text-2xs);
+    text-align: left;
+    cursor: pointer;
+  }
+  .step-num {
+    display: inline-grid;
+    place-items: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    font-weight: 700;
+    flex: none;
+  }
+  .step-label { line-height: 1.2; }
+  .step[data-done] .step-button { border-top-color: var(--accent); color: var(--ink); }
+  .step[data-done] .step-num { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+  .step-button[aria-current="step"] { border-top-color: var(--ink); color: var(--ink); font-weight: 700; }
+  .step-button[aria-current="step"] .step-num { border-color: var(--ink); }
+  .step-button:hover .step-label { text-decoration: underline; }
+
+  .form-status { margin: 0 0 var(--space-3); font-size: var(--text-xs); color: var(--accent-2-ink); }
+  .form-status:empty { display: none; }
+
+  /* Panels */
+  .step-panel { margin: 0; padding: var(--space-5); border: 1px solid var(--line); }
+  .step-panel[hidden] { display: none; }
+  /* A legend is drawn on the fieldset's border by default; floating it makes it an ordinary
+     first block inside the panel, and the clear keeps everything after it below. */
+  .step-title { float: left; width: 100%; display: grid; gap: 2px; padding: 0; margin: 0 0 var(--space-3); font-size: var(--text-lg); font-weight: 700; }
+  .step-panel > :not(legend) { clear: both; }
+  .step-kicker { font-size: var(--text-2xs); font-weight: 400; color: var(--muted); }
+  .step-lead { margin: 0 0 var(--space-4); font-size: var(--text-sm); line-height: 1.6; color: var(--muted); max-width: 65ch; }
+  .step-lead em { font-style: normal; font-weight: 700; }
+
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-4); }
+  .form-grid .span-2 { grid-column: 1 / -1; }
+  .choice-set { padding: 0; margin: 0; border: 0; min-width: 0; }
+  .choice-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .choice-row .control-toggle { min-height: 2.25rem; font-size: var(--text-xs); }
+  .control-toggle:has(input:focus-visible) { box-shadow: var(--focus-ring); }
+
+  .cost-field { display: flex; flex-direction: column; gap: var(--space-1); }
+  .cost-row { display: grid; grid-template-columns: 7rem 6.5rem minmax(0, 1fr); gap: var(--space-2); }
+  .cost-row select { min-width: 0; }
+
+  /* Supplementary items */
+  .si-list { display: grid; gap: var(--space-2); margin: 0 0 var(--space-3); padding: 0; list-style: none; }
+  .si-row { display: grid; grid-template-columns: 13rem minmax(0, 1fr) minmax(0, 1fr) 2.75rem; gap: var(--space-2); }
+  .si-row select { min-width: 0; }
+  .si-remove {
+    min-height: var(--control-height);
+    border: 1px solid var(--line);
+    border-radius: var(--control-radius);
+    background: var(--surface);
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--text-md);
+    cursor: pointer;
+  }
+  .si-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+
+  /* Reported performance */
+  .metric-grid { display: grid; grid-template-columns: 11rem minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-2) var(--space-3); align-items: center; }
+  .metric-head { font-size: var(--text-2xs); font-weight: 700; color: var(--muted); }
+  .metric-name { font-size: var(--text-xs); }
+
+  /* Scores */
+  .technique-field { max-width: 16rem; margin-bottom: var(--space-4); }
+  .score-list { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+  .score-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "head pick" "anchor anchor" "why why";
+    gap: var(--space-2) var(--space-4);
+    padding: var(--space-3) 0 var(--space-4);
+    border-top: 1px solid var(--line);
+  }
+  .score-head { grid-area: head; display: grid; gap: 2px; }
+  .score-name { font-weight: 700; font-size: var(--text-sm); }
+  .score-desc { font-size: var(--text-2xs); color: var(--muted); line-height: 1.4; }
+  .score-pick { grid-area: pick; display: flex; gap: var(--space-1); align-items: center; }
+  .score-toggle { min-height: 2.25rem; min-width: 2.25rem; padding: 0; justify-content: center; font-weight: 700; }
+  .score-clear { border: 0; background: none; color: var(--muted); font: inherit; font-size: var(--text-2xs); cursor: pointer; padding: 0 var(--space-1); }
+  .score-clear:hover { text-decoration: underline; }
+  .score-row:not([data-scored]) .score-clear { visibility: hidden; }
+  .score-anchor { grid-area: anchor; margin: 0; font-size: var(--text-xs); line-height: 1.5; color: var(--muted); }
+  .score-row[data-scored] .score-anchor { color: var(--ink); }
+  .score-why { grid-area: why; }
+
+  /* Review */
+  #suggest-preview {
+    margin: 0 0 var(--space-3);
+    padding: var(--space-3);
+    max-height: 26rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    border-radius: var(--control-radius);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    line-height: 1.5;
+  }
+  .confirm-set { display: grid; gap: var(--space-2); margin-bottom: var(--space-4); }
+  .confirm-toggle { min-height: 2.25rem; font-size: var(--text-xs); white-space: normal; height: auto; padding-block: var(--space-2); }
+  .review-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  #open-issue[aria-disabled="true"] { pointer-events: none; opacity: 0.5; }
+  .privacy-note { margin: var(--space-3) 0 0; font-size: var(--text-2xs); }
+
+  .step-nav { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); margin-top: var(--space-4); }
+  .step-count { font-size: var(--text-2xs); }
+  .step-nav [hidden] { display: none; }
+
+  @media (max-width: 640px) {
+    /* Two columns fit a phone; the shared 40rem floor is for wide data tables. */
+    .table-scroll > .qualifies-table { min-width: 0; }
+    .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .step-label { display: none; }
+    .step-button[aria-current="step"] .step-label { display: inline; }
+    .form-grid, .metric-grid, .cost-row { grid-template-columns: 1fr; }
+    .si-row { grid-template-columns: minmax(0, 1fr) 2.75rem; padding-bottom: var(--space-2); border-bottom: 1px solid var(--line); }
+    .si-row .si-kind, .si-row .si-link { grid-column: 1 / -1; }
+    .metric-head { display: none; }
+    .metric-name { margin-top: var(--space-2); font-weight: 700; }
+    .score-row { grid-template-columns: 1fr; grid-template-areas: "head" "pick" "anchor" "why"; }
+  }
+</style>

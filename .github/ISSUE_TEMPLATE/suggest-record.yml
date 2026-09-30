@@ -1,0 +1,130 @@
+name: Propose a paper
+description: Propose a paper describing an open biofabrication build, with its supplementary files and your suggested rubric scores.
+title: "Propose paper: "
+labels: ["community-submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Prefer the six-step form at [/suggest](https://biofabtoolkit.accelerationconsortium.ai/suggest)
+        on the Atlas: it fills this issue in for you. You can also fill it in by hand. Scores and
+        performance values you give are filed as **proposals** and reach the site only after a
+        curator has checked them against the paper.
+  - type: input
+    id: paper
+    attributes:
+      label: Paper title
+    validations:
+      required: true
+  - type: input
+    id: doi
+    attributes:
+      label: DOI
+      placeholder: 10.xxxx/…
+  - type: input
+    id: venue
+    attributes:
+      label: Journal and year
+      placeholder: e.g. HardwareX, 2023
+  - type: dropdown
+    id: area
+    attributes:
+      label: Application area
+      options:
+        - Bioprinting
+        - Bioreactors & Cell Culture
+        - Custom Printer
+        - Electrospinning
+        - Liquid Handling
+        - Microfabrication
+        - Microfluidics
+        - Microscopy & Imaging
+        - Organ-on-chip
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: instrument
+    attributes:
+      label: Name of the instrument
+      description: If the build has one, e.g. Replistruder 4.
+  - type: dropdown
+    id: role
+    attributes:
+      label: Your relation to the paper
+      options:
+        - Author of the paper
+        - Has built or used the design
+        - Reader of the paper
+  - type: textarea
+    id: description
+    attributes:
+      label: What it is and what it does
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it belongs in the index
+      description: Why this paper is the primary description of a build someone else could attempt.
+  - type: input
+    id: repo
+    attributes:
+      label: Design files
+      description: Repository or deposit that is reachable today.
+      placeholder: https://…
+  - type: input
+    id: licence
+    attributes:
+      label: Licence on the design files
+      description: The licence governing the CAD, firmware and documentation, not the article.
+  - type: input
+    id: files
+    attributes:
+      label: Files provided
+      description: Which of CAD, bill of materials, schematics, PCB, firmware, software, protocol, documentation.
+  - type: input
+    id: cost
+    attributes:
+      label: Cost to build
+      description: Amount, currency, and what it covers or excludes.
+      placeholder: e.g. 830 USD (excluding the OT-2 it mounts on)
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Skill needed to build it
+      options:
+        - Low
+        - Medium
+        - High
+  - type: textarea
+    id: supplementary
+    attributes:
+      label: Supplementary files
+      description: >-
+        One line per item: what it holds, a link or DOI, and what to look for. Drag files into
+        this box to attach them (25 MB each). Attachments are public with the issue; link to a
+        deposit instead if the files should carry a DOI.
+  - type: textarea
+    id: performance
+    attributes:
+      label: Performance the paper reports
+      description: >-
+        Motion accuracy, volumetric accuracy, cell viability, unattended operation, compliance
+        with a written standard. One line each with the value and where the paper states it.
+  - type: textarea
+    id: scores
+    attributes:
+      label: Proposed rubric scores
+      description: >-
+        One line per criterion, 1–5, with the anchor and what in the paper supports it. These are
+        filed as submitter proposals until a curator validates them.
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: I checked that the links above resolve to this paper and its files.
+          required: true
+        - label: I understand that scores and performance values are proposals until a curator validates them.
+          required: true

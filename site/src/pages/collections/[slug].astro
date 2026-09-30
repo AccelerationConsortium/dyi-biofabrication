@@ -1,0 +1,75 @@
+---
+import DetailShell from "../../components/DetailShell.astro";
+import ButtonLink from "../../components/ButtonLink.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import PaperCard from "../../components/PaperCard.astro";
+import Pagination from "../../components/Pagination.astro";
+import { collections, papers } from "../../data/loaders";
+
+export function getStaticPaths() {
+  return collections.map((collection) => ({
+    params: { slug: collection.slug },
+    props: { collection }
+  }));
+}
+
+const { collection } = Astro.props;
+const linkedPapers = papers.filter((paper) => collection.paperIds.includes(paper.id));
+---
+
+<BaseLayout title={`${collection.name} | DIY Biofabrication Atlas`} description={collection.description}>
+  <DetailShell breadcrumb={[{ label: "Collections", href: "/collections" }, { label: collection.name }]}>
+    <section class="panel detail-lead">
+      <div class="chip-row">
+        <span class="chip">{collection.paperCount} papers</span>
+      </div>
+      <h1>{collection.name}</h1>
+      <p class="detail-summary">{collection.description}</p>
+      <div class="detail-actions">
+        <ButtonLink href="/collections" variant="secondary">All collections</ButtonLink>
+        <button type="button" class="button-link secondary" id="copy-collection-link">Copy link</button>
+      </div>
+    </section>
+
+    <section class="panel detail-block viewpoint-block">
+      <h2>Why these papers are here</h2>
+      <p class="muted">{collection.rationale}</p>
+    </section>
+
+    <section class="explorer-grid cols-3" id="collection-papers-grid">
+      {linkedPapers.map((paper) => <PaperCard paper={paper} />)}
+    </section>
+    <Pagination id="collection-papers-pagination" />
+  </DetailShell>
+  <script>
+    import { initGridPagination } from "../../scripts/pagination.mjs";
+
+    initGridPagination({
+      gridId: "collection-papers-grid",
+      itemSelector: ".paper-card",
+      navId: "collection-papers-pagination",
+      pageSize: 24
+    });
+
+    document.getElementById("copy-collection-link")?.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+      } catch {
+        /* clipboard unavailable */
+      }
+    });
+  </script>
+</BaseLayout>
+
+<style>
+  .viewpoint-block {
+    padding: var(--space-5);
+    margin-bottom: var(--space-4);
+    border-color: color-mix(in oklch, var(--accent) 25%, var(--line));
+  }
+
+  .viewpoint-block h2 {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-md);
+  }
+</style>

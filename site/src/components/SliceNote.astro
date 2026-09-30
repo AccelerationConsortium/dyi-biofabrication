@@ -1,0 +1,31 @@
+---
+/**
+ * These pages each re-slice the same 60 builds by one attribute -- the tool named in the
+ * paper, the CAD it deposits, the repository holding it. They are useful when you arrive on
+ * one from a record or an old link, but they are not a second place to start, so they are no
+ * longer in the header. This says so, rather than leaving someone stranded on a page that
+ * looks like the main index but is missing most of it.
+ */
+export interface Props {
+  what: string;
+}
+const { what } = Astro.props;
+---
+
+<p class="slice-note">
+  This lists the {what} referenced by the corpus. To compare builds on cost, licence,
+  repository status and reported performance, <a href="/browse">start from the index</a>.
+</p>
+
+<style>
+  .slice-note {
+    margin: 0 0 var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--line);
+    background: var(--surface-alt);
+    color: var(--muted);
+    font-size: var(--text-xs);
+    max-width: 82ch;
+  }
+  .slice-note a { color: var(--accent); }
+</style>

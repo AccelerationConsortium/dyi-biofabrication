@@ -1,0 +1,35 @@
+---
+import { orderMetrics, STATUS_TEXT } from "../data/metrics";
+
+/**
+ * The five reported-performance measurements as a row of marks: coloured where the paper
+ * states a number, grey where it does not, dashed where we could not check because the
+ * full text is not held. Reading left to right is the same five every time, so a row of
+ * marks compares across cards the way a fraction never did.
+ *
+ * Each mark names itself on hover with the value the paper gave, and the row carries a
+ * spoken summary, so nothing is lost to anyone who cannot see the colour.
+ */
+export interface Props {
+  metrics: { id: string; status: string; value?: string | null }[];
+  fullTextRead: boolean;
+}
+const { metrics, fullTextRead } = Astro.props;
+const marks = orderMetrics(fullTextRead ? metrics : []);
+const reported = marks.filter((m) => m.status === "yes").length;
+const summary = fullTextRead
+  ? `${reported} of ${marks.length} performance measurements reported`
+  : "Performance measurements not assessed: full text not held";
+---
+
+<span class="metric-row" role="img" aria-label={summary}>
+  {marks.map((m) => (
+    <svg
+      class={`metric metric--${m.status}`}
+      aria-hidden="true"
+    >
+      <title>{`${m.label}: ${STATUS_TEXT[m.status]}${m.value ? ` (${m.value})` : ""}`}</title>
+      <use href={`#mi-${m.id}`} />
+    </svg>
+  ))}
+</span>

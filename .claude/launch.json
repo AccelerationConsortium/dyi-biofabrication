@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "atlas",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["site/node_modules/.bin/astro", "dev", "--root", "site", "--port", "4321"],
+      "port": 4321
+    }
+  ]
+}

@@ -1,0 +1,1159 @@
+@font-face {
+  font-family: "D-DIN";
+  src: url("/fonts/D-DIN.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "D-DIN";
+  src: url("/fonts/D-DIN-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--bg);
+  scroll-padding-top: 7rem;
+  min-height: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  color: var(--ink);
+  background: var(--bg);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+.brand-copy strong {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* An author rule setting `display` beats the UA stylesheet's `[hidden] { display: none }`,
+   whatever the specificity -- so `el.hidden = true` silently does nothing to anything this
+   stylesheet gives a display to. That shipped once: the card grid stayed on screen when the
+   List view was chosen, with the table appended 4,600px below it, so the toggle looked
+   dead. One guard is better than remembering a paired [hidden] rule for every class. */
+[hidden] {
+  display: none !important;
+}
+
+.shell {
+  width: min(calc(100% - 2rem), var(--content));
+  margin: 0 auto;
+  padding-inline: max(0px, env(safe-area-inset-left), env(safe-area-inset-right));
+}
+
+.header-shell,
+.main-shell {
+  padding-inline: max(var(--space-4), env(safe-area-inset-left), env(safe-area-inset-right));
+}
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: var(--space-4);
+  z-index: var(--z-toast);
+  padding: var(--space-3) var(--space-4);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.skip-link:focus {
+  top: var(--space-4);
+}
+
+/* Header */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding-top: env(safe-area-inset-top);
+}
+
+.site-header .shell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  flex-shrink: 0;
+  color: var(--ink);
+}
+
+.brand-mark {
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 2.5rem;
+}
+
+.brand-copy {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.brand-copy strong {
+  font-size: var(--text-sm);
+  line-height: 1.15;
+}
+
+.brand-copy span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.15;
+}
+
+@media (max-width: 640px) {
+  .brand-mark {
+    width: 2.25rem;
+    height: 2.25rem;
+    flex-basis: 2.25rem;
+  }
+
+  .brand-copy strong {
+    font-size: var(--text-2xs);
+  }
+
+  .brand-copy span {
+    display: none;
+  }
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.nav-primary {
+  display: flex;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Nav links share one control scale with the header buttons */
+.nav-primary a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: var(--control-height);
+  padding: 0 var(--control-padding-x);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--muted);
+  font-size: var(--control-font-size);
+  font-weight: var(--control-font-weight);
+  font-family: var(--font-sans);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.nav-primary a .ui-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.ui-icon {
+  flex: 0 0 auto;
+}.nav-primary a:hover { text-decoration: underline; }
+
+.nav-primary a:focus-visible {
+  background: var(--surface-alt);
+}.nav-primary a[aria-current="page"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.nav-toggle {
+  display: none;
+  min-width: var(--control-height);
+  min-height: var(--control-height);
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--control-radius);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.nav-toggle:focus-visible {
+  background: var(--surface-alt);
+  border-color: var(--line-strong);
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--control-radius);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.theme-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.theme-icon--sun,
+.theme-icon--moon {
+  display: none;
+}
+
+:root[data-theme-mode="light"] .theme-icon--system,
+:root[data-theme-mode="dark"] .theme-icon--system {
+  display: none;
+}
+
+:root[data-theme-mode="light"] .theme-icon--sun {
+  display: block;
+}
+
+:root[data-theme-mode="dark"] .theme-icon--moon {
+  display: block;
+}
+
+.nav-mobile-panel {
+  display: none;
+}
+
+main {
+  flex: 1 0 auto;
+  padding: var(--space-5) 0 var(--space-8);
+}
+
+.panel {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--accent);
+  font-family: var(--font-sans);
+}
+
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: var(--control-font-size);
+  font-family: var(--font-sans);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.button-link:active,
+.icon-button:active,
+.nav-toggle:active {
+  translate: 0 1px;
+}
+
+/* Buttons lost their colour hover with everything else, so they underline instead --
+   a call to action with no response at all under the cursor reads as disabled. */
+.button-link:hover { text-decoration: underline; }
+
+.button-link.secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.button-link.ghost {
+  background: transparent;
+  color: var(--accent);
+  border-color: transparent;
+  padding-inline: var(--space-3);
+}
+
+.button-link:focus-visible,
+.chip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-2);
+}.chip-row {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 1.75rem;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface-alt);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-family: var(--font-sans);
+  font-weight: var(--control-font-weight);
+  text-decoration: none;
+}
+
+a.chip:hover { text-decoration: underline; }
+
+/* Status chips for repo/design-file accessibility checks. */
+.chip-ok {
+  color: var(--status-success);
+  border-color: color-mix(in oklch, var(--status-success) 35%, var(--line));
+  background: var(--accent-soft);
+}
+
+.chip-warn {
+  color: var(--status-warning);
+  border-color: color-mix(in oklch, var(--status-warning) 35%, var(--line));
+  background: var(--accent-2-soft);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* File-type icons. Drawn from the sprite in BaseLayout; the label is always present for
+   assistive tech and hover, and shown only where a filter needs words. */
+.file-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-2xs);
+  line-height: 1;
+}
+.file-icon svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.file-icon--labelled { color: inherit; }
+
+/* The five reported-performance marks. Colour carries "reported"; grey carries "not";
+   a dashed stroke carries "could not check". All three keep the same outline so the row
+   reads as five slots whichever way they are filled. Non-text contrast: accent and muted
+   both clear 3:1 on every surface they sit on. */
+.metric-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  vertical-align: middle;
+}
+.metric {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* Not-reported marks are the quiet ones: mixed well down from the muted grey so the
+     coloured marks carry the row. This sits below the 3:1 non-text guideline on purpose --
+     the information is carried by the coloured marks and the "n of 5" count beside them;
+     the grey outline only marks the slot, and is kept just visible enough to do that. */
+  color: color-mix(in oklab, var(--muted) 42%, var(--surface));
+}
+/* Reported marks sit on a tinted disc as well as turning the accent colour. In dark mode
+   the accent and the muted grey land on the same luminance, so hue was the only thing
+   separating "reported" from "not" -- nothing for a colour-blind reader, and nothing
+   for anyone in dark mode. The disc is a shape cue that survives both. */
+.metric--yes {
+  color: var(--accent);
+  stroke-width: 2.1;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1.5px var(--accent-soft);
+}
+.metric--na { stroke-dasharray: 2 2; }
+.file-icon-row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Shared form controls */
+.control-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-family: var(--font-sans);
+}
+
+.control-label {
+  font-size: var(--control-label-size);
+  font-weight: var(--control-label-weight);
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+input[type="search"],
+input[type="text"],
+input[type="url"],
+input[type="number"],
+textarea,
+select {
+  min-height: var(--control-height);
+  border: 1px solid var(--control-border);
+  border-radius: var(--control-radius);
+  background-color: var(--control-bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--control-font-size);
+  font-weight: var(--control-font-weight);
+  line-height: 1.4;
+  transition: border-color var(--transition), box-shadow var(--transition), background-color var(--transition);
+}
+
+input[type="search"]::placeholder,
+input[type="text"]::placeholder,
+input[type="url"]::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+input[type="search"],
+input[type="text"],
+input[type="url"],
+input[type="number"] {
+  width: 100%;
+  padding: 0 var(--control-padding-x);
+}
+
+textarea {
+  width: 100%;
+  padding: var(--space-2) var(--control-padding-x);
+  resize: vertical;
+}
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 9.5rem;
+  max-width: 100%;
+  padding: 0 2.25rem 0 var(--control-padding-x);
+  cursor: pointer;
+  /* The chevron is masked rather than drawn, because a data URI cannot read currentColor
+     and a hard-coded stroke stays mid-grey when the theme flips to dark. */
+  background-image: none;
+  background-color: var(--control-bg);
+}
+
+/* Each of these needs its own `:hover` / `:focus`. Written as `input[...],:hover` the
+   comma ends the selector and leaves a bare `:hover`, which matched every hovered element
+   on the page -- that was the darkening that appeared over text, cards and whole sections.
+   The `:focus` list had the same defect, so every search input also carried a focus ring
+   at rest. No hover rule here now: hover changes no colour anywhere on the site. */
+input[type="search"]:focus,
+input[type="text"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+  outline: none;
+  background-color: var(--control-bg);
+}
+
+.control-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--control-padding-x);
+  border-radius: var(--control-radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--control-font-size);
+  font-weight: var(--control-font-weight);
+  color: var(--ink);
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+  user-select: none;
+}
+
+.control-toggle:has(input:checked),
+.filter-toggle:has(input:checked) {
+  background: var(--accent-soft);
+  border-color: color-mix(in oklch, var(--accent) 35%, var(--line));
+  color: var(--accent);
+}.control-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--muted);
+  margin-bottom: var(--space-4);
+}
+
+.breadcrumb a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: var(--space-3);
+  margin: var(--space-6) 0 var(--space-3);
+}
+
+.section-head h2 {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xl);
+}
+
+.section-head a {
+  color: var(--accent);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.section-head a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-primary {
+    display: none;
+  }
+
+  .nav-mobile-panel[data-open="true"] {
+    display: block;
+    position: absolute;
+    z-index: var(--z-modal);
+    top: calc(100% + var(--space-2));
+    right: max(var(--space-4), env(safe-area-inset-right));
+    left: auto;
+    width: min(26rem, calc(100vw - 2rem));
+    max-height: calc(100svh - 5.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+    box-shadow: var(--shadow-sm);
+  }
+
+  .nav-mobile-head {
+    display: grid;
+    gap: 0.1rem;
+    padding: var(--space-2) var(--space-2) var(--space-3);
+    margin-bottom: var(--space-3);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .nav-mobile-head span {
+    color: var(--ink);
+    font-weight: 700;
+    min-width: 0;
+  }
+
+  .nav-mobile-head small {
+    color: var(--muted);
+    font-size: var(--text-2xs);
+    line-height: 1.35;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .nav-mobile-group + .nav-mobile-group {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+  }
+
+  .nav-mobile-group-label {
+    display: block;
+    padding: 0 var(--space-2);
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: var(--space-2);
+  }
+
+  .nav-mobile-group ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.15rem;
+  }
+
+  .nav-mobile-panel a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: var(--control-height);
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--ink);
+    font-size: var(--control-font-size);
+    font-weight: var(--control-font-weight);
+    font-family: var(--font-sans);
+    border: 1px solid transparent;
+    transition: background var(--transition), border-color var(--transition), color var(--transition);
+  }
+
+  .nav-mobile-panel a:focus-visible {
+    background: var(--surface-alt);
+    border-color: var(--line);
+    outline: none;
+  }
+
+  .nav-mobile-panel a[aria-current="page"] {
+    background: var(--accent-soft);
+    border-color: color-mix(in oklch, var(--accent) 35%, var(--line));
+    color: var(--accent);
+  }
+
+  .nav-mobile-link-main {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .nav-mobile-link-main .ui-icon {
+    width: 1rem;
+    height: 1rem;
+    color: var(--muted);
+  }
+
+  .nav-mobile-panel a[aria-current="page"] .ui-icon {
+    color: currentColor;
+  }
+
+  .nav-mobile-link-main span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav-mobile-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-width: 1.8rem;
+    height: 1.35rem;
+    padding: 0 var(--space-1);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    background: var(--surface-alt);
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .nav-mobile-panel a[aria-current="page"] .nav-mobile-count {
+    border-color: color-mix(in oklch, var(--accent) 35%, var(--line));
+    background: var(--surface);
+    color: var(--accent);
+  }
+
+  .site-header .header-shell {
+    position: relative;
+    z-index: 1;
+  }
+
+}
+
+.control-field:has(select) {
+  position: relative;
+}
+
+.control-field:has(select)::after {
+  content: "";
+  position: absolute;
+  right: 0.65rem;
+  bottom: calc((var(--control-height) - 1rem) / 2);
+  width: 1rem;
+  height: 1rem;
+  pointer-events: none;
+  background-color: var(--muted);
+  -webkit-mask: var(--chevron-mask) center / 1rem no-repeat;
+  mask: var(--chevron-mask) center / 1rem no-repeat;
+}
+
+/* Custom select */
+.select-control {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.select-wrap {
+  position: relative;
+}
+
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0 var(--control-padding-x);
+  border: 1px solid var(--control-border);
+  border-radius: var(--control-radius);
+  background: var(--control-bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--control-font-size);
+  font-weight: var(--control-font-weight);
+  cursor: pointer;
+  text-align: left;
+}
+
+.select-trigger[aria-expanded="true"] {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+  background: var(--control-bg);
+}
+
+.select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-chevron {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.select-listbox {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  max-height: 50vh;
+  overflow: auto;
+  z-index: var(--z-dropdown);
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: 0 var(--control-padding-x);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--control-font-size);
+}
+
+/* Focus keeps a tint because it is the only thing marking the keyboard's position in
+   the list; hover does not need one. */
+.select-option:hover { text-decoration: underline; }
+
+.select-option:focus {
+  background: var(--surface-alt);
+  outline: none;
+}
+
+.select-option[aria-selected="true"] {
+  color: var(--accent);
+  font-weight: 700;
+  background: var(--accent-soft);
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+.select-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.select-native.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.site-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+/* One row, not a stack. The four links that used to sit here -- Team, Method, API,
+   GitHub -- are all in the header menus already, so the footer was repeating the
+   navigation underneath the attribution it exists to carry. */
+.footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2) var(--space-5);
+  padding-block: var(--space-4);
+  padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+.partner-logo {
+  display: block;
+  width: min(22rem, 80vw);
+  height: 3.25rem;
+  object-fit: contain;
+}
+
+.footer-preprint-link {
+  color: var(--accent);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.footer-preprint-link:hover,
+.footer-preprint-link:focus-visible {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  main {
+    padding-top: var(--space-4);
+  }
+
+  .shell {
+    width: min(calc(100% - 1rem), var(--content));
+  }
+
+  .header-shell,
+  .main-shell {
+    padding-inline: max(var(--space-2), env(safe-area-inset-left), env(safe-area-inset-right));
+  }
+
+
+  .button-link--block {
+    width: 100%;
+  }
+}
+
+/* Absent values.
+   "not stated" is a finding about the source, not a gap in the page, so it stays legible
+   rather than being faded out of the way. Defined here because the index, the record page
+   and the cards all say it. */
+.absent {
+  color: var(--muted);
+  font-style: normal;
+}
+
+/* A zone heading inside a record page. Was defined identically in four [slug] pages. */
+/* Section headings step to 20px everywhere: the record page and the home page already
+   did, and an 18px h2 beside a 18px h3 on /about was two levels at one size. */
+.zone-title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-lg);
+}
+
+/* Reference tables: the criteria-coverage table on /about and the endpoint tables on /api. */
+/* Wide tables live in a scrolling wrapper. Without one the right-hand columns ran past a
+   phone's viewport and the body's overflow-x: clip cut them off with no way to reach them --
+   on /api that was the Size and What-it-holds columns of every table. The minimum width
+   keeps the table laid out at a readable width and lets the wrapper do the scrolling,
+   rather than squeezing a description column to 64px and stacking each row 185px tall. */
+.table-scroll { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 640px) {
+  .table-scroll > .data-table,
+  .table-scroll > .coverage-table { min-width: 40rem; }
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+
+.data-table th,
+.data-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.data-table thead th {
+  color: var(--muted);
+  border-bottom-color: var(--line-strong);
+  white-space: nowrap;
+}
+
+.data-table tbody th {
+  font-weight: 700;
+}
+
+.data-table .col-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Header menus.
+   Nine destinations in four slots: the two things you do with the Atlas stay flat, and the
+   pages that explain it or take something back from you group behind a button. */
+.nav-menu {
+  position: relative;
+}
+
+.nav-menu > button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Open is a state and keeps the accent; hover only underlines. */
+.nav-menu > button:hover { text-decoration: underline; }
+
+.nav-menu > button:focus-visible {
+  background: var(--surface-alt);
+}
+
+.nav-menu > button[aria-expanded="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.nav-menu > button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Marks the menu holding the page you are on, the way aria-current marks a flat link. */
+.nav-menu > button[data-current] {
+  color: var(--accent);
+}
+
+.nav-menu-caret {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  rotate: 45deg;
+  translate: 0 -2px;
+  transition: rotate var(--transition);
+}
+
+.nav-menu > button[aria-expanded="true"] .nav-menu-caret {
+  rotate: 225deg;
+  translate: 0 2px;
+}
+
+.nav-menu-panel {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: var(--z-dropdown);
+  display: block;
+  min-width: 13rem;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+}
+
+.nav-menu-panel > li {
+  display: block;
+}
+
+.nav-menu-panel[hidden] {
+  display: none;
+}
+
+.nav-menu-panel a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-size: var(--text-xs);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nav-menu-panel a:hover { text-decoration: underline; }
+
+.nav-menu-panel a:focus-visible {
+  background: var(--surface-alt);
+}
+
+.nav-menu-panel a[aria-current="page"] {
+  color: var(--accent);
+  font-weight: 700;
+}

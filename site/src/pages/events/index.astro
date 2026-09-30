@@ -1,0 +1,47 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SliceNote from "../../components/SliceNote.astro";
+import ExplorerShell from "../../components/ExplorerShell.astro";
+import EntityCard from "../../components/EntityCard.astro";
+import SuggestRecordBanner from "../../components/SuggestRecordBanner.astro";
+import { events } from "../../data/loaders";
+---
+
+<BaseLayout title="Events | DIY Biofabrication Atlas" description="Browse conference, workshop, and demo records derived from the corpus.">
+  <SliceNote what="venues" />
+  <ExplorerShell
+    filterId="events"
+    eyebrow="Events"
+    title="Conference, workshop, and demo contexts."
+    description="Derived from venue and publication metadata in the corpus."
+    searchPlaceholder="Search event name or venue"
+    resultCount={events.length}
+    gridClass="explorer-grid cols-2"
+  >
+    <SuggestRecordBanner slot="afterHeader" type="event" label="event" />
+    {events.map((event) => (
+      <div
+        data-event-item
+        data-search={`${event.name} ${event.venue} ${event.type}`.toLowerCase()}
+      >
+        <EntityCard
+          href={`/events/${event.slug}`}
+          title={event.name}
+          description={event.venue}
+          chips={[event.type, `${event.paperCount} papers`]}
+        />
+      </div>
+    ))}
+  </ExplorerShell>
+
+  <script>
+    import { initExplorer } from "../../scripts/explorer-filters.mjs";
+    initExplorer({
+      filterId: "events",
+      itemSelector: "[data-event-item]",
+      getSearchText: (el) => el.getAttribute("data-search") || "",
+      filters: [],
+      toggles: []
+    });
+  </script>
+</BaseLayout>

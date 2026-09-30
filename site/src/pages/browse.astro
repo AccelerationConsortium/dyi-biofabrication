@@ -1,0 +1,978 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import GraphExplorer from "../components/graph/GraphExplorer.astro";
+import BuildCard from "../components/BuildCard.astro";
+import Icon from "../components/Icon.astro";
+import FileIcon from "../components/FileIcon.astro";
+import MetricIcons from "../components/MetricIcons.astro";
+import { FILE_TYPES } from "../data/file-types";
+import { graph, papers } from "../data/loaders";
+import { COST_BANDS, costBand, parseCost } from "../data/cost";
+import { supplementLinksFor } from "../data/supplements";
+import { firstSentence } from "../data/text";
+
+/**
+ * The homepage is the index, laid out the way a shop lays out a catalogue.
+ *
+ * A laboratory adopting an open design has to locate it, judge whether it is good enough,
+ * and then rebuild it. A shop answers the same three questions about a product -- what is
+ * it, is it any good, can I actually get it -- and everyone already knows how to read one.
+ * So: facets down the left, results in the middle, and the relationship map pinned top
+ * right where it stays visible while the results scroll past it.
+ *
+ * Corpus statistics are the home page's job. Here they survive only as the count beside
+ * each facet, which is where someone can act on them.
+ */
+
+/**
+ * Graph neighbours per paper, for the selection panel under the map. The panel sits under
+ * the graph, so "what this connects to" is its natural content -- and it is the one thing
+ * the card cannot show. Assets are left out: the card already draws them as file icons.
+ */
+const nodeById = new Map(graph.nodes.map((n) => [n.id, n]));
+const neighbourOrder: Record<string, number> = { topic: 0, tool: 1, repo: 2 };
+const neighboursOf = (id: string) => {
+  const seen = new Set<string>();
+  const out: { id: string; label: string; type: string }[] = [];
+  for (const e of graph.edges) {
+    const other = e.source === id ? e.target : e.target === id ? e.source : null;
+    if (!other || seen.has(other)) continue;
+    const node = nodeById.get(other);
+    if (!node || !(node.type in neighbourOrder)) continue;
+    seen.add(other);
+    out.push({ id: node.id, label: node.label, type: node.type });
+  }
+  return out.sort((a, b) => neighbourOrder[a.type] - neighbourOrder[b.type] || a.label.localeCompare(b.label));
+};
+
+const rows = papers
+  .map((paper) => {
+    const cost = (paper.approximateCost || "").split("|")[0].trim();
+    const access = paper.repo?.accessibility ?? null;
+    const reported = paper.reportedMetrics?.metrics ?? [];
+    const reportedCount = reported.filter((m) => m.status === "yes").length;
+    const standard = reported.find((m) => m.id === "standard-compliance")?.status === "yes";
+    const textRepoLink = (paper.textRepoLinks ?? [])[0] || "";
+
+    return {
+      slug: paper.slug,
+      paperId: paper.id,
+      // graph node ids this row answers to, so a map selection can filter the results
+      nodes: [
+        paper.id,
+        ...(paper.toolIds ?? []),
+        ...(paper.repoIds ?? []),
+        ...(paper.topicIds ?? []),
+        ...(paper.assetIds ?? [])
+      ].join(" "),
+      title: paper.title,
+      tool: (paper.systemOrTechnology || "").split("|")[0].trim(),
+      year: paper.year,
+      area: paper.category[0] || "Uncategorised",
+      cost,
+      // One parse feeds the card, the table cell, the sort key and the band, so those four
+      // can never disagree about what a cost string means.
+      costParsed: parseCost(cost),
+      costValue: parseCost(cost).value,
+      costBand: costBand(parseCost(cost).value) || "none",
+      licence: paper.artifactLicence?.value || "",
+      licenceSource: paper.artifactLicence?.source || "",
+      hasRepo: Boolean(paper.repo),
+      repoUrl: paper.repo?.url ?? "",
+      repoName: paper.repo?.name ?? "",
+      // an unverified link in the paper's text is weaker evidence than a checked one,
+      // but it is not the same as having none
+      textRepoLink,
+      repoState: paper.repo ? "reachable" : textRepoLink ? "intext" : "none",
+      repoMaintenance: access?.maintenance ?? "",
+      repoAge: access?.ageLabel ?? "",
+      buildScore:
+        paper.criteriaAssessment?.criteria.find((c) => c.id === "build-and-part-sourcing-complexity")?.value ?? null,
+      skillScore: paper.criteriaAssessment?.criteria.find((c) => c.id === "skill-complexity")?.value ?? null,
+      assetTypes: paper.assetTypes ?? [],
+      // The publisher's supplementary file, for records whose only design files ship with the article.
+      supplementUrl: paper.repo ? "" : supplementLinksFor(paper)[0]?.url ?? "",
+      // paper.skillLevels is empty for every record; the graded value lives on derived.
+      skillLevel: paper.derived?.skillLevel || "",
+      reportedCount,
+      reportedTotal: reported.length,
+      metrics: reported.map((m) => ({ id: m.id, status: m.status, value: m.value ?? null })),
+      standard,
+      fullTextRead: paper.reportedMetrics?.fullTextRead ?? false,
+      // Reserved for reports accepted through /rebuild-report; none have been merged yet.
+      rebuildCount: paper.rebuildReports?.length ?? 0,
+      // --- for the selection panel only: what the card does not already say ---
+      summary: paper.function?.trim() || (paper.publication?.abstract ? firstSentence(paper.publication.abstract) : ""),
+      doi: (paper.doi || "").split("|")[0].trim(),
+      venue: paper.venue || "",
+      measured: reported
+        .filter((m) => m.status === "yes")
+        .map((m) => ({ label: m.label, value: m.value ? String(m.value) : "" })),
+      criteria: (paper.criteriaAssessment?.criteria ?? [])
+        .filter((c) => c.display !== false)
+        .map((c) => ({ id: c.id, name: c.shortName || c.name, value: c.value, rationale: c.rationale || "" })),
+      criteriaAverage: paper.criteriaAssessment?.averageScore ?? null,
+      links: neighboursOf(paper.id)
+    };
+  })
+  .sort((a, b) => (a.tool || a.title).localeCompare(b.tool || b.title));
+
+/**
+ * Facets. Each option carries the predicate that defines it, so the count beside a checkbox
+ * and the filtering done when it is ticked cannot disagree -- both come from this one list.
+ * `key` names the row data attribute the client script reads, so the predicates themselves
+ * never have to be shipped to the browser.
+ */
+type Row = (typeof rows)[number];
+type Facet = {
+  id: string;
+  label: string;
+  key: string;
+  options: { value: string; label: string; test: (r: Row) => boolean }[];
+};
+
+const areas = [...new Set(rows.map((r) => r.area))].sort();
+
+/**
+ * Groups open on load. Area and Cost are what most searches start from; the other five
+ * open on a click, and seven open groups made the rail taller than the results beside it.
+ * A group restored from the URL with a tick inside opens itself (atlas-index.mjs).
+ */
+const OPEN_BY_DEFAULT = new Set(["area", "cost"]);
+
+const FACETS: Facet[] = [
+  {
+    id: "area",
+    label: "Area",
+    key: "area",
+    options: areas.map((a) => ({ value: a, label: a, test: (r: Row) => r.area === a }))
+  },
+  {
+    id: "cost",
+    label: "Cost",
+    key: "costband",
+    options: [
+      ...COST_BANDS.map((b) => ({ value: b.id, label: b.label, test: (r: Row) => r.costBand === b.id })),
+      { value: "none", label: "Not stated", test: (r: Row) => r.costBand === "none" }
+    ]
+  },
+  {
+    id: "repo",
+    label: "Design files",
+    key: "repostate",
+    options: [
+      { value: "reachable", label: "Repository reachable", test: (r: Row) => r.repoState === "reachable" },
+      { value: "intext", label: "Link in text, unverified", test: (r: Row) => r.repoState === "intext" },
+      { value: "none", label: "No link at all", test: (r: Row) => r.repoState === "none" }
+    ]
+  },
+  {
+    id: "files",
+    label: "Files included",
+    key: "files",
+    options: [
+      { value: "cad", label: "CAD", test: (r: Row) => r.assetTypes.includes("cad") },
+      { value: "bom", label: "Bill of materials", test: (r: Row) => r.assetTypes.includes("bom") },
+      { value: "software", label: "Software", test: (r: Row) => r.assetTypes.includes("software") },
+      { value: "firmware", label: "Firmware", test: (r: Row) => r.assetTypes.includes("firmware") },
+      { value: "documentation", label: "Documentation", test: (r: Row) => r.assetTypes.includes("documentation") }
+    ]
+  },
+  {
+    id: "licence",
+    label: "Licence",
+    key: "licstate",
+    // Eleven records state a licence across seven spellings, five of which appear once. A
+    // per-spelling facet would be a list of ones, so this is binary and the exact licence
+    // stays on the card.
+    options: [
+      { value: "yes", label: "Stated", test: (r: Row) => Boolean(r.licence) },
+      { value: "no", label: "Not found", test: (r: Row) => !r.licence }
+    ]
+  },
+  {
+    id: "skill",
+    label: "Skill needed",
+    key: "skill",
+    options: [
+      { value: "low", label: "Low", test: (r: Row) => r.skillLevel === "low" },
+      { value: "medium", label: "Medium", test: (r: Row) => r.skillLevel === "medium" },
+      { value: "high", label: "High", test: (r: Row) => r.skillLevel === "high" }
+    ]
+  },
+  {
+    id: "evidence",
+    label: "Evidence",
+    key: "standard",
+    options: [{ value: "yes", label: "Reports against a standard", test: (r: Row) => r.standard }]
+  }
+];
+
+// Options nothing matches are dropped rather than shown greyed out. Self-maintaining:
+// "Link in text, unverified" fell to zero once those links were checked, and any option
+// returns on its own if the corpus ever justifies it again.
+const facetGroups = FACETS.map((f) => ({
+  ...f,
+  options: f.options
+    .map((o) => ({ ...o, count: rows.filter(o.test).length }))
+    .filter((o) => o.count > 0)
+})).filter((f) => f.options.length > 0);
+
+---
+
+<BaseLayout
+  title="DIY Biofabrication Atlas"
+  description="A curated index of open-source biofabrication and laboratory-automation builds: what each costs, what licence it carries, whether its design files are still reachable, and what performance it actually reports."
+>
+  <div class="atlas-head">
+    <h1>Open biofabrication builds</h1>
+    <p class="atlas-lede">Filter by cost, licence, design files, skill and reported performance.</p>
+  </div>
+
+  <div class="workspace">
+    <aside class="shop-facets" id="atlas-facets" data-open="false" aria-label="Filters">
+      <div class="facets-head">
+        <h2>Filters</h2>
+        <button type="button" class="facets-close" id="atlas-facets-close" aria-label="Close filters">×</button>
+      </div>
+      {facetGroups.map((group) => (
+        <details class="facet" open={OPEN_BY_DEFAULT.has(group.id)}>
+          <summary>{group.label}</summary>
+          <div class="facet-options">
+            {group.options.map((option) => (
+              <label class="facet-option" title={`${option.count} of ${rows.length} builds`}>
+                <input type="checkbox" data-facet={group.key} value={option.value} />
+                {group.key === "files" && FILE_TYPES.some((t) => t.id === option.value)
+                  ? <span><FileIcon type={FILE_TYPES.find((t) => t.id === option.value)!} withLabel /></span>
+                  : <span>{option.label}</span>}
+                <b>{option.count}</b>
+              </label>
+            ))}
+          </div>
+        </details>
+      ))}
+    </aside>
+    <div class="facets-backdrop" id="atlas-facets-backdrop" hidden></div>
+
+    <div class="shop-results">
+      <div class="shop-bar" id="atlas-toolbar">
+        <button type="button" class="filters-button" id="atlas-filters" aria-expanded="false" aria-controls="atlas-facets">
+          <Icon name="sliders" />Filters<b id="atlas-filters-count" hidden></b>
+        </button>
+        <label class="control-field atlas-search">
+          <span class="sr-only">Search builds</span>
+          <input type="search" id="atlas-q" placeholder="Search name, area, licence…" autocomplete="off" />
+        </label>
+        <p class="shop-count" id="atlas-count" aria-live="polite" title="Builds matching the current search and filters">{rows.length} builds</p>
+        <p class="shop-hint">Click the name to open · click the card to inspect</p>
+        <label class="control-field shop-sort">
+          <span class="sr-only">Sort</span>
+          <select id="atlas-sort" title="Order of the results">
+            <option value="title:asc">Name A–Z</option>
+            <option value="cost:asc">Cost, low first</option>
+            <option value="cost:desc">Cost, high first</option>
+            <option value="ease:desc">Easiest first</option>
+            <option value="reports:desc">Most reported first</option>
+            <option value="year:desc">Newest first</option>
+          </select>
+        </label>
+        <div class="view-switch" role="group" aria-label="Results view">
+          <button type="button" data-view-option="cards" aria-pressed="true" title="Show results as cards"><Icon name="grid" /><span>Cards</span></button>
+          <button type="button" data-view-option="list" aria-pressed="false" title="Show results as a sortable table"><Icon name="rows" /><span>List</span></button>
+        </div>
+      </div>
+
+      <div class="shop-active" id="atlas-active" hidden>
+        <ul id="atlas-active-list"></ul>
+        <button type="button" id="atlas-clear">Clear all</button>
+      </div>
+
+      {/* Cards and list are two renderings of the same rows. The filter engine hides both
+          in step; the view switch only decides which container is on screen. */}
+      <ul class="shop-grid" id="atlas-grid">
+        {rows.map((r) => (
+          <li
+            data-row
+            data-slug={r.slug}
+            data-paper-id={r.paperId}
+            data-search={`${r.title} ${r.tool} ${r.area} ${r.licence}`.toLowerCase()}
+            data-nodes={r.nodes}
+            data-area={r.area}
+            data-costband={r.costBand}
+            data-repostate={r.repoState}
+            data-files={r.assetTypes.join(" ")}
+            data-licstate={r.licence ? "yes" : "no"}
+            data-skill={r.skillLevel}
+            data-standard={r.standard ? "yes" : "no"}
+            data-sort-title={(r.tool || r.title).toLowerCase()}
+            data-sort-area={r.area.toLowerCase()}
+            data-sort-licence={r.licence.toLowerCase()}
+            data-sort-repo={r.repoState === "reachable" ? "1" : r.repoState === "intext" ? "2" : "3"}
+            data-sort-cost={r.costValue ?? ""}
+            data-sort-ease={r.buildScore !== null && r.skillScore !== null ? (r.buildScore + r.skillScore) / 2 : ""}
+            data-sort-reports={r.fullTextRead ? r.reportedCount : ""}
+            data-sort-year={r.year ?? ""}
+          >
+            <BuildCard row={r} />
+          </li>
+        ))}
+      </ul>
+
+      <div class="atlas-table-wrap" id="atlas-list" hidden>
+        <table class="atlas-table">
+          <colgroup>
+            <col class="col-w-build" />
+            <col class="col-w-area" />
+            <col class="col-w-cost" />
+            <col class="col-w-licence" />
+            <col class="col-w-files" />
+            <col class="col-w-ease" />
+            <col class="col-w-reports" />
+          </colgroup>
+          <caption class="sr-only">Open biofabrication builds with cost, licence, design-file status, ease and reported performance</caption>
+          <thead>
+            <tr>
+              <th scope="col" class="col-build" aria-sort={"ascending"}>
+                <button type="button" data-sort="title" title="Sort by name">Build<span class="sort-caret" aria-hidden="true"></span></button>
+              </th>
+              <th scope="col" aria-sort={"none"}>
+                <button type="button" data-sort="area" title="Sort by application area">Area<span class="sort-caret" aria-hidden="true"></span></button>
+              </th>
+              <th scope="col" aria-sort={"none"}>
+                <button type="button" data-sort="cost" title="Sort by stated cost">Cost<span class="sort-caret" aria-hidden="true"></span></button>
+              </th>
+              <th scope="col" aria-sort={"none"}>
+                <button type="button" data-sort="licence" title="Sort by design-file licence">Licence<span class="sort-caret" aria-hidden="true"></span></button>
+              </th>
+              <th scope="col" aria-sort={"none"}>
+                <button type="button" data-sort="repo" title="Sort by repository state: reachable, link in text, none">Design files<span class="sort-caret" aria-hidden="true"></span></button>
+              </th>
+              <th scope="col" class="col-num" aria-sort={"none"}>
+                <button type="button" data-sort="ease" title="Sort by the two scores together, higher is easier"><abbr title="Parts sourcing score / skill needed score, each out of 5; higher is easier">Build/skill</abbr><span class="sort-caret" aria-hidden="true"></span></button>
+              </th>
+              <th scope="col" class="col-reports" aria-sort={"none"}>
+                <button type="button" data-sort="reports" title="Sort by how many of the five measurements the paper reports">Reports<span class="sort-caret" aria-hidden="true"></span></button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr
+                data-listrow
+                data-slug={r.slug}
+                data-paper-id={r.paperId}
+                data-sort-title={(r.tool || r.title).toLowerCase()}
+                data-sort-area={r.area.toLowerCase()}
+                data-sort-licence={r.licence.toLowerCase()}
+                data-sort-repo={r.repoState === "reachable" ? "1" : r.repoState === "intext" ? "2" : "3"}
+                data-sort-cost={r.costValue ?? ""}
+                data-sort-ease={r.buildScore !== null && r.skillScore !== null ? (r.buildScore + r.skillScore) / 2 : ""}
+                data-sort-reports={r.fullTextRead ? r.reportedCount : ""}
+                data-sort-year={r.year ?? ""}
+              >
+                <th scope="row" class="col-build">
+                  <a href={`/papers/${r.slug}`} title={r.title}>{r.tool || r.title}</a>
+                  {r.year && <span class="row-year">{r.year}</span>}
+                </th>
+                <td data-label="Area">{r.area}</td>
+                <td data-label="Cost">
+                  {r.costParsed.display
+                    ? (
+                        <span title={r.cost}>
+                          {r.costParsed.display}
+                          {r.costParsed.currencyInferred && (
+                            <abbr class="cost-flag" title="The source states no currency; shown as USD">?</abbr>
+                          )}
+                          {r.costParsed.partial && (
+                            <abbr class="cost-flag" title="Excludes the printer or robot this mounts on">*</abbr>
+                          )}
+                        </span>
+                      )
+                    : <span class="absent" title={r.cost || "No cost stated in the source"}>—</span>}
+                </td>
+                <td data-label="Licence">
+                  {r.licence ? <span title={`From ${r.licenceSource}`}>{r.licence}</span> : <span class="absent">—</span>}
+                </td>
+                <td data-label="Design files">
+                  {r.hasRepo
+                    ? <a href={r.repoUrl} target="_blank" rel="noreferrer" title={r.repoName}>{r.repoMaintenance === "unknown" ? "deposit" : r.repoMaintenance}</a>
+                    : r.textRepoLink
+                      ? <span title={r.textRepoLink}>in text</span>
+                      : <span class="absent">—</span>}
+                </td>
+                <td class="col-num" data-label="Build/skill">
+                  {r.buildScore !== null || r.skillScore !== null
+                    ? <span>{r.buildScore ?? "–"}<i>/</i>{r.skillScore ?? "–"}</span>
+                    : <span class="absent">–</span>}
+                </td>
+                <td class="col-reports" data-label="Reports">
+                  <MetricIcons metrics={r.metrics} fullTextRead={r.fullTextRead} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p class="shop-empty" id="atlas-empty" hidden>No builds match these filters.</p>
+    </div>
+
+    <aside class="map-pane" id="atlas-map" aria-label="Relationship map">
+      <div class="map-head">
+        <h2>Map</h2>
+        <a href="/graph">Open the full graph</a>
+      </div>
+      <GraphExplorer graph={graph} variant="compact" idPrefix="home-graph" />
+      <script
+        id="atlas-row-data"
+        type="application/json"
+        set:html={JSON.stringify(
+          Object.fromEntries(
+            rows.map((r) => [
+              r.slug,
+              {
+                name: r.tool || r.title,
+                title: r.title,
+                area: r.area,
+                year: r.year,
+                // Nothing the card already shows. The panel adds to the card, not beside it.
+                summary: r.summary,
+                doi: r.doi,
+                venue: r.venue,
+                measured: r.fullTextRead ? r.measured : [],
+                fullTextRead: r.fullTextRead,
+                criteria: r.criteria,
+                criteriaAverage: r.criteriaAverage,
+                links: r.links
+              }
+            ])
+          )
+        )}
+      ></script>
+      <p class="map-legend">
+        Colour is record type, size is how many things connect to it. Click a node to inspect it;
+        double-click opens its record.
+      </p>
+      <section class="map-selection" id="atlas-selection" hidden aria-live="polite"></section>
+    </aside>
+  </div>
+
+  <p class="atlas-footnote">
+    <strong>—</strong> means the source records nothing, not that the answer is no.
+    <strong>+ host</strong> and <strong>*</strong> mark a cost that excludes the printer or robot arm the
+    design mounts on. <strong>?</strong> marks a figure whose source names no currency, shown as USD.
+    Costs are as each paper states them, not converted between currencies or adjusted for inflation.
+    <strong>Build/skill</strong> is the parts-sourcing score / the skill-needed score, each out of 5, higher is easier; across this corpus both
+    run 2–4 rather than the full 1–5, so a 3 is the middle of the field.
+    <strong>Reports</strong> shows five marks, one per performance measurement a laboratory needs —
+    motion accuracy, volumetric accuracy, cell viability, unattended operation, compliance with a
+    standard — coloured where the paper states a number and grey where it does not. Dashed marks
+    mean the full text is not held, so the question is unanswered rather than answered no.
+    <a href="/about">How this index is built</a> · <a href="/api">API</a> ·
+    <a href="/graph">Relationship graph</a> · <a href="/suggest">Propose a paper</a>
+  </p>
+
+  <script>
+    import { initAtlasIndex } from "../scripts/atlas-index.mjs";
+    initAtlasIndex();
+  </script>
+</BaseLayout>
+
+<style>
+  /* Corpus figures used to sit here. They are the home page's job now; this page opens
+     straight on the controls, with the per-facet counts carrying the same information
+     where someone can act on it. */
+  .atlas-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-4);
+    padding: var(--space-4) 0 var(--space-3);
+  }
+  .atlas-head h1 { margin: 0; font-size: var(--text-lg); }
+  .atlas-lede { margin: 0; font-size: var(--text-xs); color: var(--muted); }
+
+  /* Three panes on a wide screen. The map is the last column so it can be sticky without
+     trapping the results, and it is last in the DOM so the keyboard reaches the results
+     first -- the map is a companion, not the way in.
+
+     The workspace breaks out of the 72rem reading measure. Prose wants a narrow column;
+     a catalogue with a facet rail and a map beside it does not, and inside 72rem the
+     results were squeezed to a single card per row. */
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+    align-items: start;
+  }
+
+  @media (min-width: 1200px) {
+    .atlas-head,
+    .workspace {
+      width: min(calc(100vw - 2rem), 96rem);
+      margin-inline: calc(50% - min(calc(50vw - 1rem), 48rem));
+    }
+  }
+
+  @media (min-width: 900px) {
+    .workspace { grid-template-columns: 14rem minmax(0, 1fr); }
+    .map-pane { grid-column: 1 / -1; grid-row: 1; }
+    .shop-facets, .shop-results { grid-row: 2; }
+  }
+
+  @media (min-width: 1100px) {
+    .workspace { grid-template-columns: 14rem minmax(0, 1fr) 21rem; }
+    .map-pane {
+      grid-column: 3;
+      grid-row: 1;
+      position: sticky;
+      top: calc(var(--control-height) + var(--space-8));
+    }
+    .shop-facets, .shop-results { grid-row: 1; }
+  }
+
+  /* The table and the map both want the same 21rem, and the table wins: a 320px Build
+     column truncates almost every title. So the two views place the map differently --
+     Cards keeps it in the sticky side column, List moves it to a band above the results.
+     One rule at every width, rather than a breakpoint where widening the window makes
+     the Build column narrower. The band is still at the top of the page, with the
+     selection stats under it, not beneath 2,000px of rows. */
+  @media (min-width: 1100px) {
+    .workspace[data-view="list"] { grid-template-columns: 14rem minmax(0, 1fr); }
+    .workspace[data-view="list"] .map-pane {
+      grid-column: 1 / -1;
+      grid-row: 1;
+      position: static;
+    }
+    .workspace[data-view="list"] .shop-facets,
+    .workspace[data-view="list"] .shop-results { grid-row: 2; }
+  }
+
+  /* In List view the column titles are the sort control, so the select beside the view
+     switch would be a second control over the same state. It stays in the DOM -- header
+     clicks still keep it in sync, and the URL still reads it -- but it is not shown.
+     Below 900px the list is coerced back to cards and the select returns with it. */
+  @media (min-width: 900px) {
+    .workspace[data-view="list"] .shop-sort { display: none; }
+  }
+
+  /* --- Facets --- */
+  .shop-facets { display: grid; gap: var(--space-2); align-content: start; }
+  @media (min-width: 900px) {
+    .shop-facets {
+      position: sticky;
+      top: calc(var(--control-height) + var(--space-8));
+      max-height: calc(100dvh - 8rem);
+      overflow-y: auto;
+    }
+  }
+  .facets-head { display: none; }
+  .facet { border: 1px solid var(--line); background: var(--surface); }
+  .facet > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .facet > summary::after { content: "\25BE"; color: var(--muted); }
+  .facet[open] > summary::after { rotate: 180deg; }
+  .facet-options { display: grid; padding: 0 var(--space-2) var(--space-2); }
+  .facet-option {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 2rem;
+    padding: 0 var(--space-1);
+    font-size: var(--text-xs);
+    cursor: pointer;
+  }
+  .facet-option span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .facet-option b { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+  .facet-option:has(input:checked) { color: var(--accent); }
+  .facet-option:has(input:checked) b { color: var(--accent); }
+  .facet-option:has(input:focus-visible) { box-shadow: var(--focus-ring); }
+
+  /* --- Toolbar --- */
+  /* The results column used to be a nested <main>, which is invalid inside the page's own
+     <main> and, worse, inherited its 20px top padding -- so the toolbar sat 28px below the
+     top of the filter rail and the Map heading beside it. A plain div, no padding, and the
+     three columns open on one line. */
+  .shop-results { padding: 0; }
+
+  .shop-bar {
+    position: sticky;
+    top: calc(var(--control-height) + var(--space-8));
+    z-index: var(--z-sticky);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    padding: 0 0 var(--space-2);
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .atlas-search { flex: 1 1 10rem; min-width: 0; }
+  .shop-count {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--muted);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .shop-sort { flex: 0 0 auto; }
+  .shop-hint { margin: 0; color: var(--muted); font-size: var(--text-2xs); white-space: nowrap; }
+  /* Touch gets a plain tap-to-open list, so the hint would be a lie there. */
+  @media not all and (hover: hover) and (pointer: fine) {
+    .shop-hint { display: none; }
+  }
+  .filters-button { display: none; }
+
+  .shop-active {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    padding: var(--space-2) 0;
+  }
+  .shop-active[hidden] { display: none; }
+  .shop-active ul { display: contents; margin: 0; padding: 0; list-style: none; }
+  .shop-active :global(li) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: 1.75rem;
+    padding: 0 var(--space-1) 0 var(--space-2);
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    font-size: var(--text-xs);
+  }
+  .shop-active :global(li button) {
+    border: 0;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    line-height: 1;
+    cursor: pointer;
+    padding: var(--space-1);
+  }
+  .shop-active :global(li button:hover) { text-decoration: underline; }
+  #atlas-clear {
+    border: 0;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--text-xs);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  #atlas-clear:focus-visible,
+  .filters-button:focus-visible,
+  .facets-close:focus-visible,
+  .shop-active :global(li button:focus-visible) {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  /* --- Results --- */
+  .shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+    gap: var(--space-3);
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .shop-grid > li { display: grid; }
+  .shop-grid > li[hidden] { display: none; }
+  /* Selected by a click, or by picking its node on the map. The outline sits outside the
+     border so it does not shift the card by a pixel when it appears. */
+  .shop-grid > li.is-selected :global(.build-card) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .atlas-table tbody tr.is-selected {
+    background: var(--accent-soft);
+  }
+
+  /* Only a mouse gets click-to-inspect, so only a mouse is told about it. */
+  @media (hover: hover) and (pointer: fine) {
+    .shop-grid > li,
+    .atlas-table tbody tr { cursor: pointer; }
+  }
+
+  .shop-empty { margin: var(--space-6) 0; color: var(--muted); text-align: center; }
+
+  /* --- Map --- */
+  .map-pane { display: grid; gap: var(--space-2); align-content: start; }
+  .map-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+  .map-head h2 { margin: 0; font-size: var(--text-md); }
+  .map-head a { font-size: var(--text-xs); color: var(--accent); }
+  .map-legend { margin: 0; font-size: var(--text-2xs); color: var(--muted); }
+  .map-selection {
+    padding: var(--space-3);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    font-size: var(--text-xs);
+  }
+  .map-selection[hidden] { display: none; }
+  .map-selection :global(.selection-title) {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .map-selection :global(.selection-meta) {
+    margin: var(--space-1) 0 0;
+    color: var(--muted);
+    font-size: var(--text-2xs);
+  }
+  .map-selection :global(.selection-sub) {
+    margin: var(--space-1) 0 0;
+    color: var(--muted);
+    font-size: var(--text-2xs);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  /* Label and value on one line each, so the panel stays a column of facts rather than a
+     grid that reflows every time a different node is picked. */
+  .map-selection :global(.selection-stats) {
+    display: grid;
+    gap: var(--space-1);
+    margin: var(--space-3) 0 0;
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--line);
+    font-size: var(--text-2xs);
+  }
+  .map-selection :global(.selection-stats > div) {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    gap: var(--space-2);
+    align-items: baseline;
+  }
+  .map-selection :global(.selection-stats dt) { color: var(--muted); }
+  .map-selection :global(.selection-kicker) {
+    margin: 0 0 var(--space-1);
+    color: var(--muted);
+    font-size: var(--text-2xs);
+  }
+  .map-selection :global(.selection-title a) { color: inherit; }
+  .map-selection :global(.selection-summary) {
+    margin: var(--space-2) 0 0;
+    font-size: var(--text-2xs);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .map-selection :global(.selection-block) {
+    margin-top: var(--space-3);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--line);
+  }
+  .map-selection :global(.selection-block .selection-stats) { margin-top: var(--space-1); padding-top: 0; border-top: 0; }
+  .map-selection :global(.selection-label) {
+    display: block;
+    margin-bottom: var(--space-1);
+    color: var(--muted);
+    font-size: var(--text-2xs);
+  }
+  /* The rubric as a strip of bars, one per criterion, in the rubric's own order. Height
+     is the score; each bar is a button, and the selected one prints its rationale below. */
+  .map-selection :global(.selection-rubric) {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 1.75rem;
+    margin: 0;
+  }
+  .map-selection :global(.rubric-bar) {
+    display: block;
+    flex: 1 1 0;
+    max-width: 1rem;
+    height: calc(var(--v, 0) * 100%);
+    min-height: 3px;
+    padding: 0;
+    border: 0;
+    background: var(--accent);
+    border-radius: 1px;
+    cursor: pointer;
+  }
+  .map-selection :global(.rubric-bar[aria-pressed="true"]) { background: var(--ink); }
+  .map-selection :global(.rubric-bar:focus-visible) { outline: none; box-shadow: var(--focus-ring); }
+  .map-selection :global(.rubric-detail) {
+    margin: var(--space-1) 0 0;
+    font-size: var(--text-2xs);
+    line-height: 1.45;
+    color: var(--muted);
+  }
+  .map-selection :global(.rubric-detail.is-open) { color: var(--ink); }
+  .map-selection :global(.rubric-detail-why) { color: var(--muted); }
+  .map-selection :global(.selection-links) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin: 0;
+  }
+  .map-selection :global(.selection-links .chip) { cursor: pointer; font: inherit; font-size: var(--text-2xs); }
+  .map-selection :global(.chip--topic) { border-color: var(--node-topic, var(--line-strong)); }
+  .map-selection :global(.chip--tool) { border-color: var(--node-tool, var(--line-strong)); }
+  .map-selection :global(.chip--repo) { border-color: var(--node-repo, var(--line-strong)); }
+  .map-selection :global(.selection-more) { color: var(--muted); font-size: var(--text-2xs); align-self: center; }
+  .map-selection :global(.selection-source) { margin: 0; font-size: var(--text-2xs); overflow-wrap: anywhere; }
+  .map-selection :global(.selection-stats dd) {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+
+  /* --- List view: the former table, one line per row --- */
+  .atlas-table-wrap { margin-top: var(--space-3); overflow-x: auto; }
+  .atlas-table-wrap[hidden] { display: none; }
+  .atlas-table {
+    width: 100%;
+    min-width: 46rem;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: var(--text-xs);
+  }
+  .col-w-area { width: 9rem; }
+  .col-w-cost { width: 8rem; }
+  .col-w-licence { width: 6rem; }
+  .col-w-files { width: 7rem; }
+  .col-w-ease { width: 6rem; }
+  .col-w-reports { width: 7.5rem; }
+  .atlas-table thead th {
+    padding: 0;
+    background: var(--surface-alt);
+    border-bottom: 1px solid var(--line-strong);
+    color: var(--muted);
+    text-align: left;
+    white-space: nowrap;
+  }
+  /* The whole header cell is the control, so the hit area matches what the eye reads as
+     the column title. Padding moves off the th and onto the button for that reason. */
+  .atlas-table thead button {
+    display: flex;
+    gap: var(--space-1);
+    align-items: center;
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
+    cursor: pointer;
+  }
+  .atlas-table thead .col-num button { justify-content: flex-end; }
+  .atlas-table thead button:hover { text-decoration: underline; }
+  .atlas-table thead button:focus-visible { outline: none; box-shadow: inset var(--focus-ring); }
+  .atlas-table thead [aria-sort="ascending"] button,
+  .atlas-table thead [aria-sort="descending"] button { color: var(--ink); font-weight: 700; }
+
+  /* A caret only where it means something: the unsorted columns stay quiet rather than
+     carrying six grey arrows that all look clickable in the same way. */
+  .sort-caret { width: 0.5rem; height: 0.5rem; flex: none; }
+  [aria-sort="ascending"] .sort-caret,
+  [aria-sort="descending"] .sort-caret {
+    background: currentColor;
+    -webkit-mask: var(--caret-mask) center / contain no-repeat;
+    mask: var(--caret-mask) center / contain no-repeat;
+  }
+  [aria-sort="descending"] .sort-caret { rotate: 180deg; }
+  .atlas-table tbody th,
+  .atlas-table td {
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .atlas-table tbody tr[hidden] { display: none; }
+  .col-build a { font-weight: 700; }
+  .row-year { margin-left: var(--space-2); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .col-num { text-align: right; font-variant-numeric: tabular-nums; }
+  .atlas-table i { font-style: normal; color: var(--muted); }
+  .atlas-table abbr { text-decoration: none; color: var(--accent-2-ink); }
+  .cost-flag { margin-left: 0.15em; }
+
+  .atlas-footnote {
+    max-width: 80ch;
+    margin: var(--space-6) 0 var(--space-4);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: var(--text-2xs);
+    line-height: 1.6;
+  }
+  .atlas-footnote a { color: var(--accent); }
+
+  /* --- Narrow: the facet column becomes a drawer --- */
+  @media (max-width: 899px) {
+    .filters-button {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      min-height: var(--control-height);
+      padding: 0 var(--space-3);
+      border: 1px solid var(--control-border);
+      background: var(--control-bg);
+      color: var(--ink);
+      font: inherit;
+      font-size: var(--control-font-size);
+      cursor: pointer;
+    }
+    .filters-button b { color: var(--accent); }
+    .view-switch { display: none; }
+
+    .shop-facets {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: var(--z-modal);
+      width: min(20rem, 86vw);
+      padding: var(--space-3);
+      overflow-y: auto;
+      background: var(--bg);
+      border-right: 1px solid var(--line-strong);
+      translate: -100% 0;
+      transition: translate var(--transition);
+    }
+    .shop-facets[data-open="true"] { translate: 0 0; }
+    .facets-head { display: flex; align-items: center; justify-content: space-between; }
+    .facets-head h2 { margin: 0; font-size: var(--text-md); }
+    .facets-close {
+      border: 0;
+      background: none;
+      color: var(--ink);
+      font-size: var(--text-lg);
+      line-height: 1;
+      cursor: pointer;
+      padding: var(--space-1);
+    }
+    .facets-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: calc(var(--z-modal) - 1);
+      background: oklch(0 0 0 / 0.45);
+    }
+    .facets-backdrop[hidden] { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shop-facets { transition: none; }
+  }
+</style>

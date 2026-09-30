@@ -1,0 +1,81 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SliceNote from "../../components/SliceNote.astro";
+import ExplorerShell from "../../components/ExplorerShell.astro";
+import EntityCard from "../../components/EntityCard.astro";
+import Select from "../../components/Select.astro";
+import SuggestRecordBanner from "../../components/SuggestRecordBanner.astro";
+import { repos } from "../../data/loaders";
+
+const repoKinds = [...new Set(repos.map((repo) => repo.kind))].sort();
+const categories = [...new Set(repos.flatMap((repo) => repo.categories))].sort();
+---
+
+<BaseLayout title="Repos | DIY Biofabrication Atlas" description="Browse repository and project resource links extracted from the corpus.">
+  <SliceNote what="repositories and deposits" />
+  <ExplorerShell
+    filterId="repos"
+    eyebrow="Repo explorer"
+    title="Project resources linked from the corpus."
+    description="GitHub, OSF, datasets, and project sites from explicit repo links."
+    searchPlaceholder="Search repo name, host, or linked paper"
+    resultCount={repos.length}
+    gridClass="explorer-grid"
+  >
+    <SuggestRecordBanner slot="afterHeader" type="repo" label="repo" />
+    <Select
+      slot="selects"
+      id="repos-kind"
+      label="Resource type"
+      options={[{ value: "", label: "All types", selected: true }, ...repoKinds.map((k) => ({ value: k, label: k }))]}
+    />
+    <Select
+      slot="selects"
+      id="repos-category"
+      label="Category"
+      options={[{ value: "", label: "All categories", selected: true }, ...categories.map((c) => ({ value: c, label: c }))]}
+    />
+    {repos.map((repo) => (
+      <div
+        data-repo-item
+        data-kind={repo.kind}
+        data-category={repo.categories.join("|")}
+        data-search={`${repo.name} ${repo.host} ${repo.paperTitles.join(" ")} ${repo.categories.join(" ")}`.toLowerCase()}
+      >
+        <EntityCard
+          href={`/repos/${repo.slug}`}
+          title={repo.name}
+          description={repo.host || repo.url}
+          chips={[
+            repo.kind,
+            ...(repo.accessibility?.checked
+              ? [
+                  repo.accessibility.accessible ? "reachable" : "unreachable",
+                  ...(repo.accessibility.lastActivity
+                    ? [`active ${repo.accessibility.lastActivity.slice(0, 7)}`]
+                    : [])
+                ]
+              : []),
+            `${repo.paperCount} papers`,
+            ...repo.categories.slice(0, 1)
+          ]}
+        />
+      </div>
+    ))}
+  </ExplorerShell>
+
+  <script>
+    import { initExplorer } from "../../scripts/explorer-filters.mjs";
+
+    initExplorer({
+      filterId: "repos",
+      itemSelector: "[data-repo-item]",
+      getSearchText: (el) => el.getAttribute("data-search") || "",
+      filters: [
+        { id: "repos-kind", param: "kind", match: (el, v) => el.getAttribute("data-kind") === v },
+        { id: "repos-category", param: "category", match: (el, v) => (el.getAttribute("data-category") || "").split("|").includes(v) }
+      ],
+      toggles: []
+    });
+  </script>
+</BaseLayout>

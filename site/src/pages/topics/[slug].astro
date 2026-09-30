@@ -1,0 +1,91 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import DetailShell from "../../components/DetailShell.astro";
+import { papers, repos, tools, topics } from "../../data/loaders";
+
+export function getStaticPaths() {
+  return topics.map((topic) => ({
+    params: { slug: topic.slug },
+    props: { topic }
+  }));
+}
+
+const { topic } = Astro.props;
+const linkedPapers = papers.filter((paper) => topic.paperIds.includes(paper.id));
+const linkedTools = tools.filter((tool) => topic.toolIds.includes(tool.id));
+const linkedRepos = repos.filter((repo) => topic.repoIds.includes(repo.id));
+---
+<BaseLayout title={`${topic.name} | DIY Biofabrication Atlas`} description={`Topic record with ${topic.paperCount} papers.`}>
+  <DetailShell breadcrumb={[{ label: "Topics", href: "/topics" }, { label: topic.name }]}>
+    <section class="panel detail-lead">
+      <div class="chip-row">
+        <span class="chip">{topic.paperCount} papers</span>
+        <span class="chip">{topic.toolCount} tools</span>
+        <span class="chip">{topic.repoCount} repos</span>
+      </div>
+      <h1>{topic.name}</h1>
+      <p class="muted summary">Topic cluster generated from normalized category metadata in the source list.</p>
+      <div class="detail-actions">
+        <a class="button-link" href={`/graph?node=${topic.id}`}>Open in graph</a>
+        <a class="button-link secondary" href="/topics">Back to topics</a>
+      </div>
+    </section>
+
+    <section class="detail-meta-grid">
+      <div class="panel detail-block">
+        <h2>Modalities</h2>
+        <div class="chip-row">{topic.modalities.map((item) => <span class="chip">{item}</span>)}</div>
+        {topic.aliases.length > 0 && (
+          <>
+            <h2>Aliases</h2>
+            <div class="chip-row">{topic.aliases.map((item) => <span class="chip">{item}</span>)}</div>
+          </>
+        )}
+      </div>
+      <div class="panel detail-block">
+        <h2>Coverage</h2>
+        <ul>
+          <li>{topic.paperCount} linked paper records</li>
+          <li>{topic.toolCount} linked tool records</li>
+          <li>{topic.repoCount} linked repo/resource records</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head"><div><span class="eyebrow">Tools</span><h2>Named tools in this topic</h2></div></div>
+      <div class="linked-grid">
+        {linkedTools.length > 0 ? linkedTools.map((tool) => (
+          <a class="panel linked-card" href={`/tools/${tool.slug}`}>
+            <strong>{tool.name}</strong>
+            <span class="muted">{tool.paperCount} linked {tool.paperCount === 1 ? "paper" : "papers"}</span>
+          </a>
+        )) : <div class="panel detail-block"><span class="muted">No named tool records in this topic yet.</span></div>}
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head"><div><span class="eyebrow">Papers</span><h2>Paper records in this topic</h2></div></div>
+      <div class="linked-grid">
+        {linkedPapers.map((paper) => (
+          <a class="panel linked-card" href={`/papers/${paper.slug}`}>
+            <strong>{paper.title}</strong>
+            <span class="muted">{paper.year ?? "Unknown year"} · {paper.modality.join(" · ")}</span>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head"><div><span class="eyebrow">Resources</span><h2>Repo and project links in this topic</h2></div></div>
+      <div class="linked-grid">
+        {linkedRepos.length > 0 ? linkedRepos.map((repo) => (
+          <a class="panel linked-card" href={`/repos/${repo.slug}`}>
+            <strong>{repo.name}</strong>
+            <span class="muted">{repo.kind} · {repo.host || repo.url}</span>
+          </a>
+        )) : <div class="panel detail-block"><span class="muted">No repo/resource records in this topic yet.</span></div>}
+      </div>
+    </section>
+  </DetailShell>
+</BaseLayout>

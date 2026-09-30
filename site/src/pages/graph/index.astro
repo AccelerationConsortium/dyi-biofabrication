@@ -1,0 +1,86 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import GraphExplorer from "../../components/graph/GraphExplorer.astro";
+import { graph, stats } from "../../data/loaders";
+
+/**
+ * The full-page graph.
+ *
+ * The index carries a small version of this map beside its results; this is the same view
+ * with its own toolbar and selection rail, and with the room to actually read it. The header
+ * is deliberately one line: every pixel spent explaining the graph is a pixel not spent
+ * drawing it, and the legend below the canvas says what the marks mean.
+ */
+const counts = [
+  { label: "builds", value: graph.counts.papers },
+  { label: "tools", value: graph.counts.tools },
+  { label: "areas", value: graph.counts.topics },
+  { label: "repositories", value: graph.counts.repos },
+  { label: "assets", value: graph.counts.assets }
+];
+const totalNodes = counts.reduce((sum, item) => sum + item.value, 0);
+---
+
+<BaseLayout
+  title="Graph | DIY Biofabrication Atlas"
+  description="The relationship map: every build linked to the tools it describes, the repositories holding its files, and the assets needed to reproduce it."
+>
+  <div class="graph-head">
+    <div class="graph-head-copy">
+      <h1>What a build pulls in with it</h1>
+      <p class="muted">
+        Adopting a design rarely means adopting one thing. {totalNodes} nodes —
+        {counts.map((item, index) => (
+          <>
+            <strong>{item.value}</strong> {item.label}{index < counts.length - 1 ? ", " : "."}
+          </>
+        ))}
+      </p>
+    </div>
+    <a class="button-link secondary" href="/browse">Back to the index</a>
+  </div>
+
+  <GraphExplorer graph={graph} />
+
+  <p class="graph-foot muted">
+    Colour is record type, size is how many things connect to a node. Click to inspect, drag to
+    move, double-click to open the record. Searching and the score filters narrow the map only —
+    to filter the {stats.paperCount} builds themselves, use the facets on <a href="/browse">the index</a>.
+  </p>
+</BaseLayout>
+
+<style>
+  /* The map wants the width the index workspace takes, not the reading measure. */
+  @media (min-width: 1200px) {
+    .graph-head,
+    .graph-foot,
+    :global(.graph-page) {
+      width: min(calc(100vw - 2rem), 96rem);
+      margin-inline: calc(50% - min(calc(50vw - 1rem), 48rem));
+    }
+  }
+
+  .graph-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    padding: var(--space-4) 0 var(--space-3);
+  }
+  .graph-head h1 { margin: 0 0 var(--space-1); font-size: var(--text-lg); }
+  .graph-head p { margin: 0; max-width: 78ch; font-size: var(--text-sm); }
+  .graph-head strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* `margin-block`, not `margin`: a shorthand here overwrote the breakout rule's
+     margin-inline above, and the legend snapped back to the reading column while the map
+     above it ran to 96rem -- so the text sat 240px in from the map's left edge. The 80ch cap
+     stays: the paragraph starts where the map starts and stops where prose should. */
+  .graph-foot {
+    max-width: 80ch;
+    margin-block: var(--space-4);
+    font-size: var(--text-2xs);
+    line-height: 1.6;
+  }
+  .graph-foot a { color: var(--accent); }
+</style>

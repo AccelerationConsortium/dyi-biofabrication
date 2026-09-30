@@ -1,0 +1,60 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SliceNote from "../../components/SliceNote.astro";
+import ExplorerShell from "../../components/ExplorerShell.astro";
+import EntityCard from "../../components/EntityCard.astro";
+import Select from "../../components/Select.astro";
+import SuggestRecordBanner from "../../components/SuggestRecordBanner.astro";
+import { assets } from "../../data/loaders";
+
+const assetTypes = [...new Set(assets.map((asset) => asset.type))].sort();
+---
+
+<BaseLayout title="Assets | DIY Biofabrication Atlas" description="Browse derived CAD, BOM, protocol, firmware, and documentation assets.">
+  <SliceNote what="CAD, BOM and other build files" />
+  <ExplorerShell
+    filterId="assets"
+    eyebrow="Asset explorer"
+    title="CAD, BOM, protocols, and build files."
+    description="Records when the corpus mentions design files, BOMs, protocols, firmware, or similar artifacts."
+    searchPlaceholder="Search asset name or type"
+    resultCount={assets.length}
+    gridClass="explorer-grid cols-3"
+  >
+    <SuggestRecordBanner slot="afterHeader" type="asset" label="asset" />
+    <Select
+      slot="selects"
+      id="assets-type"
+      label="Asset type"
+      options={[{ value: "", label: "All types", selected: true }, ...assetTypes.map((t) => ({ value: t, label: t }))]}
+    />
+    {assets.map((asset) => (
+      <div
+        data-asset-item
+        data-type={asset.type}
+        data-search={`${asset.name} ${asset.type} ${asset.format} ${asset.evidence}`.toLowerCase()}
+      >
+        <EntityCard
+          href={`/assets/${asset.slug}`}
+          title={asset.name}
+          description={asset.evidence || asset.format}
+          chips={[asset.type, `${asset.paperCount} papers`, `${asset.toolCount} tools`]}
+        />
+      </div>
+    ))}
+  </ExplorerShell>
+
+  <script>
+    import { initExplorer } from "../../scripts/explorer-filters.mjs";
+
+    initExplorer({
+      filterId: "assets",
+      itemSelector: "[data-asset-item]",
+      getSearchText: (el) => el.getAttribute("data-search") || "",
+      filters: [
+        { id: "assets-type", param: "type", match: (el, v) => el.getAttribute("data-type") === v }
+      ],
+      toggles: []
+    });
+  </script>
+</BaseLayout>

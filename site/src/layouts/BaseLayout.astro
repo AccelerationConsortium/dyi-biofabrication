@@ -1,0 +1,303 @@
+---
+export interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = "DIY biofabrication knowledge map" } = Astro.props;
+
+import "../styles/tokens.css";
+import "../styles/global.css";
+import "../styles/explorer.css";
+import "../styles/detail.css";
+import "../styles/graph.css";
+import "../styles/pagination.css";
+import Icon from "../components/Icon.astro";
+import { githubRepoUrl, perspectivePreprintUrl } from "../config/site";
+import IconSprite from "../components/IconSprite.astro";
+import { stats } from "../data/loaders";
+
+const path = Astro.url.pathname.replace(/\/$/, "") || "/";
+
+/**
+ * Navigation.
+ *
+ * One browse surface: every record type other than a build -- tool, asset, repository,
+ * skill, area -- is an attribute of a build rather than somewhere you would go looking, so
+ * each is a filter on the index instead of a destination up here.
+ *
+ * What is left splits cleanly in two. Two things you do with the Atlas stay flat, because
+ * that is the whole point of the site. The pages that explain it and the pages that take
+ * something back from you group into menus, so nine destinations cost four slots.
+ */
+type NavLink = { href: string; label: string; icon: string; external?: boolean };
+type NavItem = NavLink | { label: string; icon: string; items: NavLink[] };
+
+const navItems: NavItem[] = [
+  { href: "/browse", label: "Browse builds", icon: "rows" },
+  { href: "/graph", label: "Graph", icon: "layers" },
+  {
+    label: "About",
+    icon: "info",
+    items: [
+      { href: "/about", label: "How it is built", icon: "info" },
+      { href: "/team", label: "Team", icon: "info" },
+      { href: "/api", label: "API", icon: "database" },
+      { href: "/ontology", label: "Ontology", icon: "database" }
+    ]
+  },
+  {
+    label: "Contribute",
+    icon: "plus",
+    items: [
+      { href: "/suggest", label: "Propose a paper", icon: "plus" },
+      { href: "/rebuild-report", label: "Report a rebuild", icon: "file-text" },
+      { href: githubRepoUrl, label: "GitHub repository", icon: "link", external: true }
+    ]
+  }
+];
+
+const isMenu = (item: NavItem): item is { label: string; icon: string; items: NavLink[] } =>
+  "items" in item;
+
+// The mobile panel has room to show everything at once, so it does not need the menus.
+const mobileGroups = [
+  {
+    label: "Browse",
+    links: navItems.filter((item): item is NavLink => !isMenu(item))
+  },
+  ...navItems.filter(isMenu).map((menu) => ({ label: menu.label, links: menu.items }))
+];
+
+const isActive = (href: string) => {
+  if (href === "/") return path === "/";
+  return path === href || path.startsWith(`${href}/`);
+};
+
+const menuIsActive = (items: NavLink[]) => items.some((item) => !item.external && isActive(item.href));
+
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="preload" href="/fonts/D-DIN.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/D-DIN-Bold.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
+    <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <script is:inline>
+      const savedThemeMode = localStorage.getItem("atlas-theme-mode") || "system";
+      const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      const resolvedTheme = savedThemeMode === "system" ? preferredTheme : savedThemeMode;
+      document.documentElement.dataset.theme = resolvedTheme;
+      document.documentElement.dataset.themeMode = savedThemeMode;
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <IconSprite />
+    <header class="site-header">
+      <div class="shell header-shell">
+        <a class="brand" href="/">
+          <img class="brand-mark" src="/brand-mark.svg" alt="" />
+          <span class="brand-copy">
+            <strong>DIY Biofabrication Atlas</strong>
+            <span>{stats.paperCount} open builds, compared</span>
+          </span>
+        </a>
+        <nav class="site-nav" aria-label="Primary">
+          <ul class="nav-primary">
+            {navItems.map((item, index) =>
+              isMenu(item) ? (
+                <li class="nav-menu" data-nav-menu>
+                  <button
+                    type="button"
+                    id={`nav-menu-${index}`}
+                    aria-expanded="false"
+                    aria-haspopup="true"
+                    aria-controls={`nav-menu-panel-${index}`}
+                    data-current={menuIsActive(item.items) ? "true" : undefined}
+                  >
+                    <Icon name={item.icon} />{item.label}
+                    <span class="nav-menu-caret" aria-hidden="true"></span>
+                  </button>
+                  <ul class="nav-menu-panel" id={`nav-menu-panel-${index}`} hidden>
+                    {item.items.map((link) => (
+                      <li>
+                        <a
+                          href={link.href}
+                          aria-current={!link.external && isActive(link.href) ? "page" : undefined}
+                          {...(link.external ? { target: "_blank", rel: "noreferrer" } : {})}
+                        >
+                          <Icon name={link.icon} />{link.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ) : (
+                <li>
+                  <a href={item.href} aria-current={isActive(item.href) ? "page" : undefined}>
+                    <Icon name={item.icon} />{item.label}
+                  </a>
+                </li>
+              )
+            )}
+          </ul>
+          <button type="button" class="icon-button theme-toggle" id="theme-toggle" aria-label="Theme: system" title="Theme: system">
+            <svg class="theme-icon theme-icon--system" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M9 20h6M12 16v4"/></svg>
+            <svg class="theme-icon theme-icon--sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+            <svg class="theme-icon theme-icon--moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 15.1A8.5 8.5 0 0 1 8.9 3.6 8.5 8.5 0 1 0 20.4 15.1Z"/></svg>
+          </button>
+          <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="nav-mobile-panel" aria-label="Open menu">
+            ☰
+          </button>
+        </nav>
+        <div class="nav-mobile-panel" id="nav-mobile-panel" data-open="false">
+          <div class="nav-mobile-head">
+            <span>Menu</span>
+            <small>{stats.paperCount} open builds, curated</small>
+          </div>
+          {mobileGroups.map((group) => (
+            <div class="nav-mobile-group">
+              <span class="nav-mobile-group-label">{group.label}</span>
+              <ul>
+                {group.links.map((link) => (
+                  <li>
+                    <a href={link.href} aria-current={isActive(link.href) ? "page" : undefined}>
+                      <span class="nav-mobile-link-main">
+                        <Icon name={link.icon} />
+                        <span>{link.label}</span>
+                      </span>
+                      {"count" in link && <span class="nav-mobile-count">{link.count}</span>}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </header>
+    <main id="main" class="shell main-shell">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <img
+          class="partner-logo"
+          id="partner-logo"
+          src="/logo_light.svg"
+          alt="University of Toronto, Acceleration Consortium, and Human Organ Mimicry Self-Driving Lab"
+        />
+        {perspectivePreprintUrl && (
+          <a href={perspectivePreprintUrl} class="footer-preprint-link" target="_blank" rel="noreferrer">
+            Read the perspective preprint
+          </a>
+        )}
+      </div>
+    </footer>
+    <script>
+      const mobileToggle = document.getElementById("nav-toggle");
+      const mobilePanel = document.getElementById("nav-mobile-panel");
+      const themeToggle = document.getElementById("theme-toggle");
+      const partnerLogo = document.getElementById("partner-logo");
+      const themeMedia = window.matchMedia("(prefers-color-scheme: dark)");
+      const themeModes = ["system", "light", "dark"];
+
+      const resolveTheme = (mode: string) => (mode === "system" ? (themeMedia.matches ? "dark" : "light") : mode);
+
+      const setThemeMode = (mode: string) => {
+        const safeMode = themeModes.includes(mode) ? mode : "system";
+        const theme = resolveTheme(safeMode);
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.dataset.themeMode = safeMode;
+        localStorage.setItem("atlas-theme-mode", safeMode);
+        localStorage.removeItem("atlas-theme");
+        const nextMode = themeModes[(themeModes.indexOf(safeMode) + 1) % themeModes.length];
+        const label = `Theme: ${safeMode}. Switch to ${nextMode}.`;
+        themeToggle?.setAttribute("aria-label", label);
+        themeToggle?.setAttribute("title", label);
+        partnerLogo?.setAttribute("src", theme === "dark" ? "/logo_dark.svg" : "/logo_light.svg");
+      };
+
+      setThemeMode(document.documentElement.dataset.themeMode || "system");
+      themeToggle?.addEventListener("click", () => {
+        const currentMode = document.documentElement.dataset.themeMode || "system";
+        const nextMode = themeModes[(themeModes.indexOf(currentMode) + 1) % themeModes.length];
+        setThemeMode(nextMode);
+      });
+      themeMedia.addEventListener("change", () => {
+        if (document.documentElement.dataset.themeMode === "system") setThemeMode("system");
+      });
+
+      // Header menus. Only one open at a time; Escape and an outside click close them, and
+      // focus returns to the button so a keyboard user is not dropped at the top of the page.
+      const navMenus = Array.from(document.querySelectorAll<HTMLElement>("[data-nav-menu]"));
+
+      const setMenu = (menu: HTMLElement, open: boolean) => {
+        const button = menu.querySelector<HTMLButtonElement>("button");
+        const panel = menu.querySelector<HTMLElement>(".nav-menu-panel");
+        if (!button || !panel) return;
+        button.setAttribute("aria-expanded", String(open));
+        panel.hidden = !open;
+      };
+
+      const closeMenus = (except?: HTMLElement) => {
+        for (const menu of navMenus) if (menu !== except) setMenu(menu, false);
+      };
+
+      for (const menu of navMenus) {
+        const button = menu.querySelector<HTMLButtonElement>("button");
+        button?.addEventListener("click", () => {
+          const open = button.getAttribute("aria-expanded") === "true";
+          closeMenus(menu);
+          setMenu(menu, !open);
+        });
+        menu.addEventListener("keydown", (event) => {
+          if (event.key !== "Escape") return;
+          setMenu(menu, false);
+          button?.focus();
+        });
+        // Tabbing out of the last link should close it, the way a real menu behaves.
+        menu.addEventListener("focusout", (event) => {
+          if (!menu.contains(event.relatedTarget as Node)) setMenu(menu, false);
+        });
+      }
+
+      document.addEventListener("click", (event) => {
+        if (!(event.target as Element).closest("[data-nav-menu]")) closeMenus();
+      });
+
+      mobileToggle?.addEventListener("click", () => {
+        const open = mobilePanel?.getAttribute("data-open") === "true";
+        mobilePanel?.setAttribute("data-open", open ? "false" : "true");
+        mobileToggle.setAttribute("aria-expanded", open ? "false" : "true");
+        mobileToggle.setAttribute("aria-label", open ? "Open menu" : "Close menu");
+      });
+
+      mobilePanel?.querySelectorAll("a").forEach((link) => {
+        link.addEventListener("click", () => {
+          mobilePanel.setAttribute("data-open", "false");
+          mobileToggle?.setAttribute("aria-expanded", "false");
+          mobileToggle?.setAttribute("aria-label", "Open menu");
+        });
+      });
+
+      mobileToggle?.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          mobilePanel?.setAttribute("data-open", "false");
+          mobileToggle.setAttribute("aria-expanded", "false");
+          mobileToggle.setAttribute("aria-label", "Open menu");
+        }
+      });
+    </script>
+  </body>
+</html>

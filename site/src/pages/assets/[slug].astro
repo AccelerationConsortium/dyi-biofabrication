@@ -1,0 +1,86 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import DetailShell from "../../components/DetailShell.astro";
+import AtAGlance from "../../components/AtAGlance.astro";
+import CollapsibleBlock from "../../components/CollapsibleBlock.astro";
+import ButtonLink from "../../components/ButtonLink.astro";
+import Pagination from "../../components/Pagination.astro";
+import { assets, papers, tools } from "../../data/loaders";
+
+export function getStaticPaths() {
+  return assets.map((asset) => ({
+    params: { slug: asset.slug },
+    props: { asset }
+  }));
+}
+
+const { asset } = Astro.props;
+const linkedPapers = papers.filter((paper) => asset.paperIds.includes(paper.id));
+const linkedTools = tools.filter((tool) => asset.toolIds.includes(tool.id));
+---
+
+<BaseLayout title={`${asset.name} | DIY Biofabrication Atlas`} description={`Derived ${asset.type} asset record.`}>
+  <DetailShell breadcrumb={[{ label: "Assets", href: "/assets" }, { label: asset.name }]}>
+    <section class="panel detail-lead">
+      <div class="chip-row">
+        <span class="chip">{asset.type}</span>
+        <span class="chip">{asset.paperCount} papers</span>
+        <span class="chip">{asset.toolCount} tools</span>
+      </div>
+      <h1>{asset.name}</h1>
+      <p class="detail-summary">{asset.evidence || `Build-support ${asset.type} record from corpus evidence.`}</p>
+      <div class="detail-actions">
+        {asset.url && <ButtonLink href={asset.url} external>Open source</ButtonLink>}
+        <ButtonLink href={`/graph?node=${asset.id}`} variant="secondary">Open in graph</ButtonLink>
+      </div>
+    </section>
+
+    <AtAGlance
+      items={[
+        { label: "Type", value: asset.type },
+        { label: "Format", value: asset.format || "—" },
+        { label: "Papers", value: String(asset.paperCount) },
+        { label: "Tools", value: String(asset.toolCount) }
+      ]}
+    />
+
+    {linkedTools.length > 0 && (
+      <section class="page-zone">
+        <h2 class="zone-title">Linked tools</h2>
+        <div class="chip-scroller">
+          {linkedTools.map((tool) => <a class="chip" href={`/tools/${tool.slug}`}>{tool.name}</a>)}
+        </div>
+      </section>
+    )}
+
+    <CollapsibleBlock title="Linked papers and notes">
+      {asset.notes && <p class="muted note">{asset.notes}</p>}
+      <div class="linked-grid" id="asset-papers-grid">
+        {linkedPapers.map((paper) => (
+          <a class="panel linked-card" href={`/papers/${paper.slug}`}>
+            <strong>{paper.title}</strong>
+            <span class="muted">{paper.year ?? "Unknown"} · {paper.category.join(" · ")}</span>
+          </a>
+        ))}
+      </div>
+      <Pagination id="asset-papers-pagination" />
+    </CollapsibleBlock>
+  </DetailShell>
+  <script>
+    import { initGridPagination } from "../../scripts/pagination.mjs";
+
+    initGridPagination({
+      gridId: "asset-papers-grid",
+      itemSelector: ".linked-card",
+      navId: "asset-papers-pagination",
+      pageSize: 24
+    });
+  </script>
+</BaseLayout>
+
+<style>
+  .zone-title {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-md);
+  }
+</style>

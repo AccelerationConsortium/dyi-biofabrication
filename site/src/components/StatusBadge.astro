@@ -1,0 +1,56 @@
+---
+export interface Props {
+  type: "repo" | "opensource" | "workshop" | "skill" | "docs";
+  label?: string;
+}
+
+const { type, label } = Astro.props;
+
+const labels: Record<string, string> = {
+  repo: "Repo linked",
+  opensource: "Open-source",
+  workshop: "Workshop-ready",
+  skill: "Skill level",
+  docs: "Documentation"
+};
+
+const classes: Record<string, string> = {
+  repo: "status-badge--repo",
+  opensource: "status-badge--repo",
+  workshop: "status-badge--workshop",
+  skill: "",
+  docs: ""
+};
+
+const text = label || labels[type];
+const className = `status-badge ${classes[type]}`;
+---
+
+<span class={className}>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    {(type === "repo" || type === "opensource") && (
+      <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.01.28-2.09 0-3.09A5.5 5.5 0 0 0 16 2c-1.1 0-2.08.45-2.8 1.2A5.5 5.5 0 0 0 8 2a5.5 5.5 0 0 0-1.2 3c-.28 1-.28 2.09 0 3.09A5.5 5.5 0 0 0 5 14.5C5 18 8 20 11 20.5V22" />
+    )}
+    {type === "workshop" && (
+      <>
+        <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+        <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
+      </>
+    )}
+    {type === "skill" && (
+      <>
+        <path d="M12 20V10" />
+        <path d="M18 20V4" />
+        <path d="M6 20v-4" />
+      </>
+    )}
+    {type === "docs" && (
+      <>
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+      </>
+    )}
+  </svg>
+  {text}
+</span>

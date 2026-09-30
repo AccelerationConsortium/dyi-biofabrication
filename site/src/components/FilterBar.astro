@@ -1,0 +1,39 @@
+---
+import Icon from "./Icon.astro";
+
+export interface Props {
+  id: string;
+  searchPlaceholder?: string;
+  resultCount: number;
+}
+
+const { id, searchPlaceholder = "Search…", resultCount } = Astro.props;
+const hasToggles = Astro.slots.has("toggles");
+---
+
+<div class="filter-bar" data-filter-root={id}>
+  <div class="filter-row">
+    <label class="control-field filter-search">
+      <span class="control-label">Search</span>
+      <input id={`${id}-search`} type="search" placeholder={searchPlaceholder} autocomplete="off" />
+    </label>
+    <slot name="selects" />
+  </div>
+  {hasToggles && (
+    <details class="filter-expand">
+      <summary class="filter-expand-summary">
+        <span><Icon name="sliders" />More filters</span>
+        <span class="filter-expand-icon" aria-hidden="true">+</span>
+      </summary>
+      <div class="filter-toggles">
+        <slot name="toggles" />
+      </div>
+    </details>
+  )}
+  <div class="filter-actions">
+    <span id={`${id}-count`} class="results-count muted" aria-live="polite">
+      {resultCount} results
+    </span>
+    <button type="button" class="clear-filters" id={`${id}-clear`} hidden>Clear filters</button>
+  </div>
+</div>

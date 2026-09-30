@@ -1,0 +1,74 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SliceNote from "../../components/SliceNote.astro";
+import ExplorerShell from "../../components/ExplorerShell.astro";
+import EntityCard from "../../components/EntityCard.astro";
+import Select from "../../components/Select.astro";
+import SuggestRecordBanner from "../../components/SuggestRecordBanner.astro";
+import { tools } from "../../data/loaders";
+
+const categories = [...new Set(tools.flatMap((tool) => tool.categories))].sort();
+const modalities = [...new Set(tools.flatMap((tool) => tool.modalities))].sort();
+---
+
+<BaseLayout title="Tools | DIY Biofabrication Atlas" description="Browse named tools extracted from the corpus metadata.">
+  <SliceNote what="named tools" />
+  <ExplorerShell
+    filterId="tools"
+    eyebrow="Tool explorer"
+    title="Open-source systems in the corpus."
+    description="Named tools linked to papers, repos, skills, and build assets."
+    searchPlaceholder="Search tool name, category, or linked paper"
+    resultCount={tools.length}
+    gridClass="explorer-grid"
+  >
+    <SuggestRecordBanner slot="afterHeader" type="tool" label="tool" />
+    <Select
+      slot="selects"
+      id="tools-category"
+      label="Category"
+      options={[{ value: "", label: "All categories", selected: true }, ...categories.map((c) => ({ value: c, label: c }))]}
+    />
+    <Select
+      slot="selects"
+      id="tools-modality"
+      label="Modality"
+      options={[{ value: "", label: "All modalities", selected: true }, ...modalities.map((m) => ({ value: m, label: m }))]}
+    />
+    <label slot="toggles" class="control-toggle"><input id="tools-repo" type="checkbox" /><span>Has repo</span></label>
+    {tools.map((tool) => (
+      <div
+        data-tool-item
+        data-search={`${tool.name} ${tool.aliases.join(" ")} ${tool.categories.join(" ")} ${tool.modalities.join(" ")} ${tool.paperTitles.join(" ")}`.toLowerCase()}
+        data-category={tool.categories.join("|")}
+        data-modality={tool.modalities.join("|")}
+        data-has-repo={tool.repoCount > 0 ? "true" : "false"}
+      >
+        <EntityCard
+          href={`/tools/${tool.slug}`}
+          title={tool.name}
+          description={tool.perspectiveSnippet || tool.description || tool.categories.join(" · ")}
+          chips={[`${tool.paperCount} papers`, `${tool.repoCount} repos`, tool.documentationTier]}
+          extraChips={tool.skillLevels.map((s) => `${s} skill`)}
+        />
+      </div>
+    ))}
+  </ExplorerShell>
+
+  <script>
+    import { initExplorer } from "../../scripts/explorer-filters.mjs";
+
+    initExplorer({
+      filterId: "tools",
+      itemSelector: "[data-tool-item]",
+      getSearchText: (el) => el.getAttribute("data-search") || "",
+      filters: [
+        { id: "tools-category", param: "category", match: (el, v) => (el.getAttribute("data-category") || "").split("|").includes(v) },
+        { id: "tools-modality", param: "modality", match: (el, v) => (el.getAttribute("data-modality") || "").split("|").includes(v) }
+      ],
+      toggles: [
+        { id: "tools-repo", param: "repo", match: (el) => el.getAttribute("data-has-repo") === "true" }
+      ]
+    });
+  </script>
+</BaseLayout>

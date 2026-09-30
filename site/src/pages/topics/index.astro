@@ -1,0 +1,67 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SliceNote from "../../components/SliceNote.astro";
+import ExplorerShell from "../../components/ExplorerShell.astro";
+import EntityCard from "../../components/EntityCard.astro";
+import Select from "../../components/Select.astro";
+import SuggestRecordBanner from "../../components/SuggestRecordBanner.astro";
+import { topics } from "../../data/loaders";
+
+const modalities = [...new Set(topics.flatMap((topic) => topic.modalities))].sort();
+---
+
+<BaseLayout title="Topics | DIY Biofabrication Atlas" description="Browse topic clusters generated from the corpus categories.">
+  <SliceNote what="application areas" />
+  <ExplorerShell
+    filterId="topics"
+    eyebrow="Topic explorer"
+    title="Corpus clusters by category."
+    description="Topics generated from normalized category labels in the list."
+    searchPlaceholder="Search topic name, modality, or linked paper"
+    resultCount={topics.length}
+    gridClass="explorer-grid"
+  >
+    <SuggestRecordBanner slot="afterHeader" type="topic" label="topic" />
+    <Select
+      slot="selects"
+      id="topics-modality"
+      label="Modality"
+      options={[{ value: "", label: "All modalities", selected: true }, ...modalities.map((m) => ({ value: m, label: m }))]}
+    />
+    <label slot="toggles" class="control-toggle"><input id="topics-tools" type="checkbox" /><span>Has tools</span></label>
+    <label slot="toggles" class="control-toggle"><input id="topics-repos" type="checkbox" /><span>Has repos</span></label>
+    {topics.map((topic) => (
+      <div
+        data-topic-item
+        data-modality={topic.modalities.join("|")}
+        data-has-tools={topic.toolCount > 0 ? "true" : "false"}
+        data-has-repos={topic.repoCount > 0 ? "true" : "false"}
+        data-search={`${topic.name} ${topic.aliases.join(" ")} ${topic.modalities.join(" ")} ${topic.paperTitles.join(" ")}`.toLowerCase()}
+      >
+        <EntityCard
+          href={`/topics/${topic.slug}`}
+          title={topic.name}
+          description={topic.modalities.slice(0, 4).join(" · ") || "No modality tags yet"}
+          chips={[`${topic.paperCount} papers`, `${topic.toolCount} tools`, `${topic.repoCount} repos`]}
+        />
+      </div>
+    ))}
+  </ExplorerShell>
+
+  <script>
+    import { initExplorer } from "../../scripts/explorer-filters.mjs";
+
+    initExplorer({
+      filterId: "topics",
+      itemSelector: "[data-topic-item]",
+      getSearchText: (el) => el.getAttribute("data-search") || "",
+      filters: [
+        { id: "topics-modality", param: "modality", match: (el, v) => (el.getAttribute("data-modality") || "").split("|").includes(v) }
+      ],
+      toggles: [
+        { id: "topics-tools", param: "tools", match: (el) => el.getAttribute("data-has-tools") === "true" },
+        { id: "topics-repos", param: "repos", match: (el) => el.getAttribute("data-has-repos") === "true" }
+      ]
+    });
+  </script>
+</BaseLayout>

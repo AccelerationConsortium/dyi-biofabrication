@@ -1,0 +1,101 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import DetailShell from "../../components/DetailShell.astro";
+import { papers, repos } from "../../data/loaders";
+
+export function getStaticPaths() {
+  return repos.map((repo) => ({
+    params: { slug: repo.slug },
+    props: { repo }
+  }));
+}
+
+const { repo } = Astro.props;
+const linkedPapers = papers.filter((paper) => repo.paperIds.includes(paper.id));
+const access = repo.accessibility ?? { checked: false };
+const formatDate = (value: string) => (value ? new Date(value).toISOString().slice(0, 10) : "");
+---
+<BaseLayout title={`${repo.name} | DIY Biofabrication Atlas`} description={`Repo/resource record linked to ${repo.paperCount} corpus paper(s).`}>
+  <DetailShell breadcrumb={[{ label: "Repos", href: "/repos" }, { label: repo.name }]}>
+    <section class="panel detail-lead">
+      <div class="chip-row">
+        <span class="chip">{repo.kind}</span>
+        <span class="chip">{repo.paperCount} linked {repo.paperCount === 1 ? "paper" : "papers"}</span>
+        {repo.host && <span class="chip">{repo.host}</span>}
+        {access.checked && (
+          <span class={`chip ${access.accessible ? "chip-ok" : "chip-warn"}`}>
+            {access.accessible ? "Reachable" : "Unreachable"}
+          </span>
+        )}
+        {access.archived && <span class="chip chip-warn">Archived</span>}
+      </div>
+      <h1>{repo.name}</h1>
+      <p class="muted summary">
+        Generated from the explicit repo/resource link in the curated corpus. This record keeps
+        the external project page tied to the paper records that reference it.
+      </p>
+      <div class="detail-actions">
+        <a class="button-link" href={repo.url} target="_blank" rel="noreferrer">Open resource</a>
+        <a class="button-link secondary" href={`/graph?node=${repo.id}`}>Open in graph</a>
+        <a class="button-link secondary" href="/repos">Back to repos</a>
+      </div>
+    </section>
+
+    <section class="detail-meta-grid">
+      <div class="panel detail-block">
+        <h2>Resource metadata</h2>
+        <dl>
+          <div><dt>Type</dt><dd>{repo.kind}</dd></div>
+          <div><dt>Host</dt><dd>{repo.host || "Unknown"}</dd></div>
+          <div><dt>URL</dt><dd><a href={repo.url} target="_blank" rel="noreferrer">{repo.url}</a></dd></div>
+        </dl>
+      </div>
+      <div class="panel detail-block">
+        <h2>Accessibility check</h2>
+        {access.checked ? (
+          <dl>
+            <div>
+              <dt>Status</dt>
+              <dd>{access.accessible ? "Reachable" : "Unreachable"}{access.archived ? " (archived)" : ""}</dd>
+            </div>
+            <div>
+              <dt>Last activity</dt>
+              <dd>{access.lastActivity ? formatDate(access.lastActivity) : "Not reported by host"}</dd>
+            </div>
+            <div><dt>Checked</dt><dd>{formatDate(access.checkedAt)}</dd></div>
+            {access.license && <div><dt>License</dt><dd>{access.license}</dd></div>}
+          </dl>
+        ) : (
+          <p class="muted">This resource has not been checked yet.</p>
+        )}
+      </div>
+      <div class="panel detail-block">
+        <h2>Linked categories</h2>
+        <div class="chip-row">
+          {repo.categories.map((item) => <span class="chip">{item}</span>)}
+        </div>
+        <h2>Modalities</h2>
+        <div class="chip-row">
+          {repo.modalities.map((item) => <span class="chip">{item}</span>)}
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Linked papers</span>
+          <h2>Papers pointing to this resource</h2>
+        </div>
+      </div>
+      <div class="linked-grid">
+        {linkedPapers.map((paper) => (
+          <a class="panel linked-card" href={`/papers/${paper.slug}`}>
+            <strong>{paper.title}</strong>
+            <span class="muted">{paper.year ?? "Unknown year"} · {paper.category.join(" · ")}</span>
+          </a>
+        ))}
+      </div>
+    </section>
+  </DetailShell>
+</BaseLayout>

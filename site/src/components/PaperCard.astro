@@ -1,0 +1,95 @@
+---
+import type { PaperRecord } from "../data/types";
+import FileIcon from "./FileIcon.astro";
+import { orderFileTypes } from "../data/file-types";
+import { firstSentence } from "../data/text";
+
+/**
+ * One paper in the list: title, then the facts, then one line that says what it is.
+ *
+ * The excerpt is the curated one-line `function` where a curator wrote one (ten records),
+ * otherwise the first sentence of the paper's own abstract. It is never `summary`: that
+ * field holds the team's working notes -- "we should extract the repo link from full text",
+ * "include if you want broader DIW tooling" -- which were written for us, not for a reader.
+ * And it is never boilerplate: twenty-four records used to print "Structured record from
+ * the DIY biofabrication corpus", which is twenty-four lines saying nothing.
+ */
+export interface Props {
+  paper: PaperRecord;
+}
+
+const { paper } = Astro.props;
+
+const excerpt = paper.function?.trim() || (paper.publication?.abstract ? firstSentence(paper.publication.abstract) : "");
+const facts = [paper.year, paper.venue, paper.category[0]].filter(Boolean).join(" · ");
+const files = orderFileTypes(paper.assetTypes ?? []);
+const score = paper.criteriaAssessment.rubricMapped ? paper.criteriaAssessment.averageScore : null;
+---
+
+<article class="paper-card research-record" data-paper-card>
+  <h3 class="record-title"><a href={`/papers/${paper.slug}`}>{paper.title}</a></h3>
+  <p class="record-meta">
+    <span class="record-facts">{facts}</span>
+    {files.length > 0 && (
+      <span class="record-files file-icon-row" aria-label="Files included">
+        {files.map((f) => <FileIcon type={f} />)}
+      </span>
+    )}
+    {score !== null && score !== undefined && (
+      <span class="record-score" title="Average across the scored rubric criteria, out of 5">
+        Rubric {score.toFixed(1)}<i>/5</i>
+      </span>
+    )}
+  </p>
+  {excerpt && <p class="record-excerpt">{excerpt}</p>}
+</article>
+
+<style>
+  .record-title {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: 700;
+    line-height: 1.3;
+    text-wrap: pretty;
+  }
+  .record-title a { text-decoration: none; }
+  .record-title a:hover { text-decoration: underline; }
+
+  /* Facts on the left, files and score on the right, one line. The score sits beside
+     the record it scores instead of in a corner of its own. */
+  .record-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--text-2xs);
+    line-height: 1.4;
+  }
+  .record-facts { min-width: 0; }
+  .record-files { margin-left: auto; }
+  .record-files + .record-score { margin-left: 0; }
+  .record-score {
+    margin-left: auto;
+    color: var(--accent);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .record-score i { font-style: normal; font-weight: 400; color: var(--muted); }
+
+  /* Body size, not caption size: this is the line a reader actually reads. Two lines,
+     then it stops -- the record page has the rest. */
+  .record-excerpt {
+    margin: var(--space-1) 0 0;
+    max-width: 78ch;
+    font-size: var(--text-xs);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

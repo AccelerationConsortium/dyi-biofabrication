@@ -1,0 +1,66 @@
+name: Fill a gap in a record
+description: Supply a cost, licence or design-file link that a record in the Atlas is missing.
+title: "Complete record: "
+labels: ["complete-record"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Most records in the Atlas are missing a cost, a licence, or a link to the design
+        files, because the paper never stated one. **If you built or published the design,
+        you know the answer and the paper's readers do not.**
+
+        This form is for completing a record that is already in the index. To propose a
+        build that is not in it at all, use
+        [/suggest](https://biofabtoolkit.accelerationconsortium.ai/suggest) instead.
+  - type: input
+    id: record
+    attributes:
+      label: Which record
+      description: Its title or DOI, or the address of its page on the Atlas.
+      placeholder: https://biofabtoolkit.accelerationconsortium.ai/papers/…
+    validations:
+      required: true
+  - type: checkboxes
+    id: fields
+    attributes:
+      label: What you are supplying
+      options:
+        - label: Cost
+        - label: Licence on the design files
+        - label: Link to the design files
+        - label: Something else
+  - type: input
+    id: cost
+    attributes:
+      label: Cost
+      description: >-
+        State the currency and say what it covers. If it excludes a host printer or robot
+        arm the design mounts on, say so — the index marks those separately.
+      placeholder: e.g. 830 USD, excluding the OT-2 it runs on
+  - type: input
+    id: licence
+    attributes:
+      label: Licence on the design files
+      description: The licence governing the CAD, firmware and documentation, not the article.
+      placeholder: e.g. CERN-OHL-S-2.0
+  - type: input
+    id: repo
+    attributes:
+      label: Link to the design files
+      description: A repository, deposit or archive that is reachable today.
+      placeholder: https://…
+  - type: textarea
+    id: source
+    attributes:
+      label: Where this comes from
+      description: >-
+        The Atlas records provenance for every value, so a figure with no source cannot be
+        used. Give a page or section of the paper, a file in the repository, or say that
+        you are the author and are stating it directly.
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else

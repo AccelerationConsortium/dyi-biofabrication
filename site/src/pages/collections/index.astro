@@ -1,0 +1,47 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SliceNote from "../../components/SliceNote.astro";
+import ScanHeader from "../../components/ScanHeader.astro";
+import EntityCard from "../../components/EntityCard.astro";
+import Pagination from "../../components/Pagination.astro";
+import { collections } from "../../data/loaders";
+
+// Topic collections restate /topics and the Area filter on the index: the same
+// taxonomy through a third door. A lens is only worth a card when it answers a
+// question the taxonomy cannot, such as "what could my lab build with little
+// engineering capacity". Topic routes stay live for links already pointing at them.
+const lenses = collections.filter((collection) => !collection.slug.startsWith("topic-"));
+---
+
+<BaseLayout title="Collections | DIY Biofabrication Atlas" description="Curated static collections built from derived readiness and documentation metadata.">
+  <SliceNote what="curated lenses" />
+  <ScanHeader
+    eyebrow="Collections"
+    title="Browse the corpus through practical lenses."
+    description="Cuts across the index to answer questions the area filter cannot: what a lab with little engineering capacity could attempt, which builds are genuinely demanding, and which ship CAD you can open today. Browse by area on the index instead."
+  />
+  {/* EntityCard renders an h3; this keeps the heading order from jumping h1 -> h3. */}
+  <h2 class="sr-only">Collections</h2>
+  <div class="explorer-grid cols-2" id="collections-grid">
+    {lenses.map((collection) => (
+      <EntityCard
+        href={`/collections/${collection.slug}`}
+        title={collection.name}
+        description={collection.description}
+        chips={[`${collection.paperCount} papers`]}
+      />
+    ))}
+  </div>
+  <Pagination id="collections-pagination" />
+</BaseLayout>
+
+<script>
+  import { initGridPagination } from "../../scripts/pagination.mjs";
+
+  initGridPagination({
+    gridId: "collections-grid",
+    itemSelector: ".entity-card",
+    navId: "collections-pagination",
+    pageSize: 24
+  });
+</script>

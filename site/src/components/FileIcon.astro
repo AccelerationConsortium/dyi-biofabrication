@@ -1,0 +1,19 @@
+---
+import type { FileType } from "../data/file-types";
+
+/**
+ * One file type as an icon. The name is still there for anyone who cannot see the drawing:
+ * spelled out on hover, and read aloud. `withLabel` prints it too, for places like the
+ * facet where a filter needs words.
+ */
+export interface Props {
+  type: FileType;
+  withLabel?: boolean;
+}
+const { type, withLabel = false } = Astro.props;
+---
+
+<span class:list={["file-icon", withLabel && "file-icon--labelled"]} title={type.title}>
+  <svg aria-hidden="true"><use href={`#fi-${type.id}`} /></svg>
+  <span class:list={[!withLabel && "sr-only"]}>{type.label}</span>
+</span>

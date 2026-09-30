@@ -1,0 +1,19 @@
+---
+export interface Props {
+  title?: string;
+  message?: string;
+  clearId?: string;
+}
+
+const {
+  title = "No matching records",
+  message = "Try adjusting your search or clearing filters.",
+  clearId = "explorer-clear"
+} = Astro.props;
+---
+
+<div class="empty-state" id="explorer-empty" hidden>
+  <h3>{title}</h3>
+  <p>{message}</p>
+  <button type="button" class="clear-filters" id={clearId}>Clear filters</button>
+</div>

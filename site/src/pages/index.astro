@@ -1,0 +1,314 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ButtonLink from "../components/ButtonLink.astro";
+import GraphExplorer from "../components/graph/GraphExplorer.astro";
+import { corpusTotal, gaps, holdings } from "../data/corpus-gaps";
+import { githubRepoUrl } from "../config/site";
+import { graph, stats } from "../data/loaders";
+
+/**
+ * The home page states the argument; /browse is the catalogue that supports it.
+ *
+ * Three things, in the order a reader needs them: what this is, with the graph beside it
+ * so the shape of the corpus arrives before any prose about it; what the papers leave
+ * out, which is the argument and is entirely counts; and what you can do about it.
+ *
+ * Every gap figure is a link into the filtered catalogue, so the number opens the records
+ * behind it rather than only asserting itself. None of them carries an explanatory note:
+ * "47 of 60 state no licence" does not need one, and five notes turned the argument into
+ * a page nobody would finish.
+ */
+const completeRecordUrl = `${githubRepoUrl}/issues/new?template=complete-record.yml`;
+
+/** The corpus in one line, so the figures that are not the argument do not become a section. */
+const facts = [
+  `${corpusTotal} builds`,
+  `${stats.yearMin}–${stats.yearMax}`,
+  `${stats.topicCount} application areas`,
+  `${stats.openAccessCount} open access`,
+  `${stats.fullTextHeldCount} full texts held`
+];
+
+/** The argument. Order runs from the most common gap to the one that is total. */
+/** What each figure counts, for the hover hint on its tile. */
+const headlineHints: Record<string, string> = {
+  cost: "Papers that state no build cost",
+  licence: "Papers whose design files carry no stated licence",
+  repo: "Papers with no reachable repository or deposit",
+  standard: "Papers that report a measurement against a written standard",
+  rebuilt: "Builds an independent laboratory has reported rebuilding"
+};
+
+const headline = [
+  ...gaps,
+  {
+    id: "standard",
+    count: holdings.againstStandard,
+    label: "report against a standard",
+    href: "/browse?standard=yes"
+  },
+  { id: "rebuilt", count: holdings.rebuilt, label: "independently rebuilt", href: "" }
+];
+---
+
+<BaseLayout
+  title="DIY Biofabrication Atlas"
+  description={`A curated index of ${corpusTotal} open-source biofabrication and laboratory-automation builds: what each costs, what licence it carries, whether its design files are still reachable, and what performance it actually reports.`}
+>
+  <div class="home">
+  <section class="hero">
+    <div class="hero-copy">
+      <h1>Open hardware for biofabrication, curated</h1>
+      <p class="hero-lede">
+        {corpusTotal} published biofabrication and laboratory-automation builds, each read and
+        recorded the same way: cost, licence on the design files, whether those files still
+        resolve, and what performance the paper measures.
+      </p>
+      <p class="hero-facts" title="Records in the index · years covered · application areas · open-access articles · full texts the curators hold">{facts.join(" · ")}</p>
+      <div class="hero-actions">
+        <ButtonLink href="/browse" title="The catalogue: filter by area, cost, licence, files and evidence">Browse the {corpusTotal} builds</ButtonLink>
+        <ButtonLink href="/graph" variant="secondary" title="Every record and what it connects to, with filters">Open the full graph</ButtonLink>
+      </div>
+    </div>
+
+    <figure class="hero-graph">
+      <GraphExplorer graph={graph} variant="compact" idPrefix="home-graph" />
+      <figcaption>
+        Every build, instrument, repository and topic, and what links them. Drag to explore;
+        double-click a node to open its record.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="page-zone" aria-labelledby="gaps-heading">
+    <h2 class="zone-title" id="gaps-heading">What the papers leave out</h2>
+    <p class="zone-lede">
+      Curation records only what was published. Against the four things needed to rebuild a
+      design — price, licence, files, a measured result — most of this corpus falls short.
+    </p>
+    <ul class="gap-band">
+      {headline.map((item) => (
+        <li>
+          {item.href ? (
+            <a href={item.href} title={`${headlineHints[item.id] ?? item.label}. Opens the filtered catalogue.`}>
+              <b>{item.count}</b>
+              <span>of {corpusTotal} {item.label}</span>
+            </a>
+          ) : (
+            <div title={headlineHints[item.id] ?? item.label}>
+              <b>{item.count}</b>
+              <span>of {corpusTotal} {item.label}</span>
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="page-zone ask" aria-labelledby="ask-heading">
+    <h2 class="zone-title" id="ask-heading">If you built one of these, you can close a gap</h2>
+    <p>
+      Nobody can curate a cost the authors never printed. For most records the missing piece is one
+      figure, one licence identifier, or a link to the files. If you designed or built the
+      instrument, you have it. Every value here carries a source, so a contribution needs one too.
+    </p>
+    <div class="ask-actions">
+      <ButtonLink href={completeRecordUrl} external title="Supply a cost, licence or design-file link a record lacks (GitHub issue)">Fill a gap in a record</ButtonLink>
+      <ButtonLink href="/rebuild-report" variant="secondary" title="Tell us what happened when you built one of these">Report a rebuild</ButtonLink>
+      <ButtonLink href="/suggest" variant="secondary" title="Six-step form for a paper that should be in the index">Propose a paper we missed</ButtonLink>
+    </div>
+  </section>
+  </div>
+</BaseLayout>
+
+<style>
+  /* The graph sits beside the opening claim rather than under it: the shape of the corpus
+     is the fastest statement of what this is, and it should not have to wait for a scroll. */
+  .hero {
+    display: grid;
+    gap: var(--space-5);
+    align-items: center;
+    padding: var(--space-4) 0;
+  }
+  @media (min-width: 1000px) {
+    .hero {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 25rem);
+      gap: var(--space-6);
+    }
+  }
+
+  .hero h1 {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-2xl);
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+  .hero-lede {
+    max-width: 58ch;
+    margin: 0 0 var(--space-3);
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+  .hero-facts {
+    margin: 0 0 var(--space-4);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: var(--text-2xs);
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+  .hero-graph { margin: 0; }
+  /* Taller than the compact default, which is sized for the narrow map pane on /browse.
+     In a wide hero that height leaves the layout as a small knot in the middle of a lot
+     of empty canvas; giving it closer to a square lets the force layout spread. */
+  /* The force layout has no zoom-to-fit: link distances and charge are absolute, so the
+     graph settles at about 300px across whatever canvas it is given. The frame is sized
+     to the layout rather than the other way round -- a wider box only adds empty canvas. */
+  .hero-graph :global(.graph-page--compact .graph-workspace) {
+    height: clamp(16rem, 30dvh, 22rem);
+    max-height: 22rem;
+  }
+  .hero-graph figcaption {
+    max-width: 60ch;
+    margin-top: var(--space-2);
+    color: var(--muted);
+    font-size: var(--text-2xs);
+    line-height: 1.45;
+  }
+
+  .page-zone { margin-bottom: var(--space-6); }
+  .zone-lede {
+    max-width: 74ch;
+    margin: 0 0 var(--space-4);
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: 1.6;
+    text-wrap: pretty;
+  }
+
+  /* One band, five figures, no notes. The numbers are the sentence; each is the filter for
+     the records it counts, so reading one and opening it are the same gesture. */
+  .gap-band {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 1px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .gap-band li { background: var(--surface); }
+  .gap-band a,
+  .gap-band div {
+    display: grid;
+    gap: var(--space-1);
+    height: 100%;
+    padding: var(--space-4);
+    color: inherit;
+    text-decoration: none;
+  }
+  .gap-band a:hover span { text-decoration-thickness: 2px; }
+  .gap-band a:focus-visible { outline: none; box-shadow: inset var(--focus-ring); }
+  .gap-band b {
+    color: var(--accent-2-ink);
+    font-size: var(--text-2xl);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .gap-band span {
+    color: var(--muted);
+    font-size: var(--text-2xs);
+    line-height: 1.4;
+  }
+  .gap-band a span { text-decoration: underline; text-decoration-color: var(--line-strong); }
+
+  .ask {
+    padding: var(--space-5);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface-alt);
+  }
+  .ask .zone-title { margin-top: 0; }
+  .ask > p {
+    max-width: 74ch;
+    margin: 0 0 var(--space-4);
+    font-size: var(--text-sm);
+    line-height: 1.6;
+    text-wrap: pretty;
+  }
+  .ask-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+  @media (max-width: 640px) {
+    .hero { padding-top: var(--space-3); }
+    .hero h1 { font-size: var(--text-xl); }
+    .ask { padding: var(--space-4); }
+  }
+  /* The whole page on one screen, without pixel-counting the chrome.
+     `main` is already a flex child that grows to fill what the header and footer leave,
+     so `.home` takes that height and splits it: the two text blocks keep the height they
+     need, and the hero row is `minmax(0, 1fr)` -- it takes whatever is left and, crucially,
+     is allowed to go *below* its content height. The graph is the only thing in it that
+     can shrink, so the graph is what absorbs the difference. Nothing here knows how tall
+     the header or footer is.
+
+     Guarded at 850px because that is where it genuinely fits: the text blocks need about
+     690px, and the header and footer take roughly 155px. Below that the page scrolls the
+     ordinary way, which is better than a squeezed graph or a scrollbar inside the page. */
+  @media (min-width: 1000px) and (min-height: 850px) {
+    /* `main` ships as `flex: 1 0 auto` against a `min-height` body -- it grows past the
+       viewport rather than being bounded by it, so a `1fr` row inside had nothing to
+       divide. Giving the body a definite height and letting main shrink is what turns
+       the leftover space into a real budget. `overflow` on main is the safety valve:
+       if the text alone ever outgrows the screen it scrolls instead of being clipped. */
+    :global(body:has(.home)) { height: 100svh; }
+    :global(main:has(.home)) {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    /* `min-content`, not 0: the hero row gives its slack to the graph, but never shrinks
+       past the width of the copy beside it. At `minmax(0, 1fr)` a short window collapsed
+       the row and the hero text printed over the section below it. */
+    .home {
+      flex: 1;
+      display: grid;
+      grid-template-rows: minmax(min-content, 1fr) auto auto;
+      gap: var(--space-3);
+      min-height: 0;
+    }
+    .home > * { margin-bottom: 0; }
+
+    /* Trimmed so the fit is not knife-edge at one particular window height. */
+    :global(main:has(.home)) { padding: var(--space-3) 0 var(--space-4); }
+    .ask { padding: var(--space-4); }
+    .gap-band a,
+    .gap-band div { padding: var(--space-3); }
+
+    .hero { min-height: 0; padding: 0; }
+    .hero-graph {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: var(--space-2);
+      min-height: 0;
+      height: 100%;
+    }
+    .hero-graph :global(.graph-page--compact) { min-height: 0; height: 100%; }
+    /* A floor, so a short window shrinks the graph rather than erasing it. */
+    .hero-graph :global(.graph-page--compact .graph-workspace) {
+      height: 100%;
+      min-height: 11rem;
+      max-height: none;
+    }
+  }
+</style>

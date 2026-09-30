@@ -1,0 +1,9 @@
+{
+  "csv": "/Users/iyakavets/Downloads/biofab_opensource_tools_MASTER (1).csv",
+  "out_dir": "/Users/iyakavets/Documents/DYI perspective/downloaded_papers",
+  "total": 122,
+  "downloaded": 53,
+  "failed": 54,
+  "skipped": 15,
+  "manifest": "/Users/iyakavets/Documents/DYI perspective/downloaded_papers/download_manifest.csv"
+}

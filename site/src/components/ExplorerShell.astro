@@ -1,0 +1,102 @@
+---
+import ScanHeader from "./ScanHeader.astro";
+import FilterBar from "./FilterBar.astro";
+import EmptyState from "./EmptyState.astro";
+import StickyFilterDock from "./StickyFilterDock.astro";
+import Pagination from "./Pagination.astro";
+import Icon from "./Icon.astro";
+
+export interface Props {
+  filterId: string;
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  statValue?: string;
+  statLabel?: string;
+  searchPlaceholder?: string;
+  resultCount: number;
+  gridClass?: string;
+  compactHeader?: boolean;
+}
+
+const {
+  filterId,
+  eyebrow,
+  title,
+  description,
+  statValue,
+  statLabel,
+  searchPlaceholder,
+  resultCount,
+  gridClass = "explorer-grid",
+  compactHeader = true
+} = Astro.props;
+const supportsViewToggle = gridClass.split(" ").includes("explorer-grid");
+---
+
+<ScanHeader
+  eyebrow={eyebrow}
+  title={title}
+  description={description}
+  statValue={statValue}
+  statLabel={statLabel}
+  compact={compactHeader}
+/>
+
+<slot name="afterHeader" />
+
+<section class="explorer-panel page-zone zone-primary">
+  <div class="explorer-workspace">
+    <aside class="explorer-control-rail" aria-label="Search controls">
+      <StickyFilterDock>
+        <FilterBar id={filterId} searchPlaceholder={searchPlaceholder} resultCount={resultCount}>
+          <slot name="selects" slot="selects" />
+          <slot name="toggles" slot="toggles" />
+        </FilterBar>
+      </StickyFilterDock>
+    </aside>
+    <div class="explorer-results" data-explorer-results={filterId} data-view="grid">
+      {/* Cards are h3; without this the heading order jumps h1 -> h3 for screen readers. */}
+      <h2 class="sr-only">Results</h2>
+      {supportsViewToggle && (
+        <div class="explorer-results-toolbar">
+          <span class="muted">View</span>
+          <div class="view-switch" role="group" aria-label="Results view">
+            <button type="button" data-view-option="grid" aria-pressed="true"><Icon name="grid" /><span>Grid</span></button>
+            <button type="button" data-view-option="table" aria-pressed="false"><Icon name="rows" /><span>Table</span></button>
+          </div>
+        </div>
+      )}
+      {supportsViewToggle && (
+        <div class="explorer-table-header" aria-hidden="true">
+          <span>Record</span>
+          <span>Evidence</span>
+          <span>Summary</span>
+        </div>
+      )}
+      <div class={gridClass} id={`${filterId}-grid`}>
+        <slot />
+        <EmptyState clearId={`${filterId}-clear`} />
+      </div>
+      <Pagination id={`${filterId}-pagination`} />
+    </div>
+  </div>
+</section>
+
+{supportsViewToggle && (
+  <script define:vars={{ filterId }}>
+    const results = document.querySelector(`[data-explorer-results="${filterId}"]`);
+    const buttons = results?.querySelectorAll("[data-view-option]");
+    const storageKey = "atlas-explorer-view";
+
+    const setView = (view) => {
+      if (!results || (view !== "grid" && view !== "table")) return;
+      results.dataset.view = view;
+      buttons?.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.viewOption === view)));
+      localStorage.setItem(storageKey, view);
+    };
+
+    buttons?.forEach((button) => button.addEventListener("click", () => setView(button.dataset.viewOption)));
+    setView(localStorage.getItem(storageKey) || "grid");
+  </script>
+)}

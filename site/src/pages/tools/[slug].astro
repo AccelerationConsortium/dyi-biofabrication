@@ -1,0 +1,127 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import DetailShell from "../../components/DetailShell.astro";
+import AtAGlance from "../../components/AtAGlance.astro";
+import CollapsibleBlock from "../../components/CollapsibleBlock.astro";
+import ButtonLink from "../../components/ButtonLink.astro";
+import StatusBadge from "../../components/StatusBadge.astro";
+import Pagination from "../../components/Pagination.astro";
+import { papers, repos, tools } from "../../data/loaders";
+
+export function getStaticPaths() {
+  return tools.map((tool) => ({
+    params: { slug: tool.slug },
+    props: { tool }
+  }));
+}
+
+const { tool } = Astro.props;
+const linkedPapers = papers.filter((paper) => tool.paperIds.includes(paper.id));
+const linkedRepos = repos.filter((repo) => tool.repoIds.includes(repo.id));
+const primarySkill = tool.skillLevels[0] || "medium";
+const buildComplexity = tool.buildComplexities[0] || "Unspecified";
+---
+
+<BaseLayout title={`${tool.name} | DIY Biofabrication Atlas`} description={tool.perspectiveSnippet || tool.description || `Tool record linked to ${tool.paperCount} paper(s).`}>
+  <DetailShell breadcrumb={[{ label: "Tools", href: "/tools" }, { label: tool.name }]}>
+    <section class="panel detail-lead">
+      <div class="chip-row">
+        <span class="chip">{tool.paperCount} papers</span>
+        <span class="chip">{tool.repoCount} repos</span>
+        <span class="chip">{tool.documentationTier} docs</span>
+      </div>
+      <h1>{tool.name}</h1>
+      {tool.perspectiveSnippet && (
+        <p class="detail-summary">{tool.perspectiveSnippet}</p>
+      )}
+      <div class="evidence-rail">
+        {tool.repoCount > 0 && <StatusBadge type="repo" />}
+        {tool.workshopPaperCount > 0 && <StatusBadge type="workshop" />}
+        <StatusBadge type="skill" label={`${primarySkill} skill`} />
+        <StatusBadge type="docs" label={`${tool.documentationTier} docs`} />
+      </div>
+      <div class="detail-actions">
+        <ButtonLink href={`/graph?node=${tool.id}`}>Open in graph</ButtonLink>
+        {linkedRepos[0] && <ButtonLink href={`/repos/${linkedRepos[0].slug}`} variant="secondary">Primary repo</ButtonLink>}
+      </div>
+    </section>
+
+    <AtAGlance
+      items={[
+        { label: "Skill", value: primarySkill },
+        { label: "Build", value: buildComplexity },
+        { label: "Assets", value: tool.assetTypes.length > 0 ? tool.assetTypes.join(", ") : "—" },
+        { label: "Replication", value: tool.replicationStatus }
+      ]}
+    />
+
+    {tool.skillTags.length > 0 && (
+      <section class="page-zone">
+        <h2 class="zone-title">Skills required</h2>
+        <div class="chip-scroller">
+          {tool.skillTags.map((item) => <span class="chip">{item}</span>)}
+        </div>
+      </section>
+    )}
+
+    {tool.assetTypes.length > 0 && (
+      <section class="page-zone">
+        <h2 class="zone-title">Build assets</h2>
+        <div class="linked-grid">
+          {tool.assetTypes.map((assetType) => (
+            <div class="panel linked-card">
+              <strong>{assetType}</strong>
+              <span class="muted">Derived from linked paper evidence</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
+
+    <CollapsibleBlock title="Linked papers">
+      <div class="linked-grid" id="tool-papers-grid">
+        {linkedPapers.map((paper) => (
+          <a class="panel linked-card" href={`/papers/${paper.slug}`}>
+            <strong>{paper.title}</strong>
+            <span class="muted">{paper.year ?? "Unknown year"} · {paper.category.join(" · ")}</span>
+          </a>
+        ))}
+      </div>
+      <Pagination id="tool-papers-pagination" />
+    </CollapsibleBlock>
+
+    <CollapsibleBlock title="Repos and metadata">
+      <div class="linked-grid">
+        {linkedRepos.length > 0 ? linkedRepos.map((repo) => (
+          <a class="panel linked-card" href={`/repos/${repo.slug}`}>
+            <strong>{repo.name}</strong>
+            <span class="muted">{repo.kind} · {repo.host || repo.url}</span>
+          </a>
+        )) : <p class="muted">No explicit repo record is linked to this tool yet.</p>}
+      </div>
+      <div class="detail-meta-grid" style="margin-top: var(--space-4);">
+        <div class="panel detail-block">
+          <h2>Categories</h2>
+          <div class="chip-row">{tool.categories.map((item) => <span class="chip">{item}</span>)}</div>
+        </div>
+      </div>
+    </CollapsibleBlock>
+  </DetailShell>
+  <script>
+    import { initGridPagination } from "../../scripts/pagination.mjs";
+
+    initGridPagination({
+      gridId: "tool-papers-grid",
+      itemSelector: ".linked-card",
+      navId: "tool-papers-pagination",
+      pageSize: 24
+    });
+  </script>
+</BaseLayout>
+
+<style>
+  .zone-title {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-md);
+  }
+</style>

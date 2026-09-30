@@ -1,0 +1,75 @@
+name: Report a rebuild attempt
+description: Tell us what happened when you tried to build an open design from the Atlas — including attempts that did not work.
+title: "Rebuild report: "
+labels: ["rebuild-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A design nobody has rebuilt is a claim rather than a tool. **Attempts that failed or
+        stalled are as useful as ones that worked** — they tell the next laboratory what the
+        documentation leaves out. Use the form at
+        [/rebuild-report](https://biofabtoolkit.accelerationconsortium.ai/rebuild-report) to fill
+        this in automatically.
+  - type: input
+    id: build
+    attributes:
+      label: Which build
+      description: Name and DOI of the design you attempted.
+    validations:
+      required: true
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: Outcome
+      options:
+        - Completed and working
+        - Completed but underperforming
+        - Partially built, stalled
+        - Abandoned
+    validations:
+      required: true
+  - type: input
+    id: build-time
+    attributes:
+      label: Time spent
+      description: Roughly how long from parts arriving to a working instrument, in hours or days.
+  - type: input
+    id: actual-cost
+    attributes:
+      label: Actual cost paid
+      description: What it really cost you, including host equipment you had to buy. State the currency.
+  - type: dropdown
+    id: setting
+    attributes:
+      label: Setting
+      options:
+        - Teaching laboratory
+        - Research laboratory
+        - Core facility
+        - Individual / hobbyist
+        - Company
+        - Other
+  - type: textarea
+    id: docs-gaps
+    attributes:
+      label: What the documentation missed
+      description: Parts absent from the bill of materials, steps that were unclear, files that would not open, tolerances that mattered.
+    validations:
+      required: true
+  - type: textarea
+    id: measured
+    attributes:
+      label: Performance you measured
+      description: Any figure you checked yourself, and how you measured it. State the standard if you used one.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: This report describes a build I or my group actually attempted.
+          required: true

@@ -1,0 +1,5 @@
+# Static JSON, served for anyone to read. Without an explicit allow-origin a browser on
+# another site cannot fetch these at all, which would make the examples on /api untrue.
+/api/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=300

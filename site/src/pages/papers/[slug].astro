@@ -1,0 +1,721 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import DetailShell from "../../components/DetailShell.astro";
+import ButtonLink from "../../components/ButtonLink.astro";
+import MetricIcons from "../../components/MetricIcons.astro";
+import FileIcon from "../../components/FileIcon.astro";
+import { METRICS } from "../../data/metrics";
+import { orderFileTypes } from "../../data/file-types";
+import CollapsibleBlock from "../../components/CollapsibleBlock.astro";
+import Pagination from "../../components/Pagination.astro";
+import { papers, topics, criteriaStats, criteriaRubric } from "../../data/loaders";
+import { parseCost } from "../../data/cost";
+import { githubRepoUrl, siteUrl } from "../../config/site";
+import { supplementLinksFor } from "../../data/supplements";
+
+export function getStaticPaths() {
+  return papers.map((paper) => ({
+    params: { slug: paper.slug },
+    props: { paper }
+  }));
+}
+
+const { paper } = Astro.props;
+const related = papers
+  .filter((candidate) => candidate.slug !== paper.slug)
+  .filter((candidate) => candidate.category.some((item) => paper.category.includes(item)));
+const linkedTopics = topics.filter((topic) => paper.topicIds.includes(topic.id));
+const assessment = paper.criteriaAssessment;
+// Two of the ten criteria are measured but not shown: one is scored for a tenth of the
+// corpus, the other gives three quarters of it the same value. Neither can tell one build
+// from another, so neither belongs in front of someone choosing between them. The build
+// pipeline decides which, from the corpus itself, and records why.
+const shownCriteria = assessment.criteria.filter((criterion) => criterion.display !== false);
+/** The rubric's own one-line question for each criterion, for the hover hint on its name. */
+const criterionQuestion = new Map(criteriaRubric.map((c) => [c.id, c.description]));
+const withheldCriteria = assessment.criteria.filter((criterion) => criterion.display === false);
+const reported = paper.reportedMetrics ?? { assessed: false, metrics: [] };
+const repoAccess = paper.repo?.accessibility ?? null;
+const publication = paper.publication?.matchMethod !== "none" ? paper.publication : null;
+const crossref = publication?.crossref;
+const openAlex = publication?.openAlex;
+const publicationAuthors = publication?.authors || [];
+const publicationTopics = [...new Set([...(openAlex?.topics || []), ...(openAlex?.keywords || []), ...(crossref?.subjects || [])])];
+const publicationFunders = [
+  ...(crossref?.funders || []).map((item) => [item.name, item.awards.join(", ")].filter(Boolean).join(" · ")),
+  ...(openAlex?.grants || []).map((item) => [item.funder, item.awardId].filter(Boolean).join(" · "))
+].filter(Boolean);
+const recordDoi = publication?.resolvedDoi || paper.doi.split("|")[0]?.trim() || "Missing";
+const recordCost = paper.approximateCost.split("|")[0]?.trim() || "Unknown";
+
+/**
+ * What this build is, in the page's own voice.
+ *
+ * `summary` and `whyItMatters` are curator's notes -- one of them reads "we should extract
+ * the repo link from full text" -- so they belong in the curator's block further down, not
+ * under the title. `function` is a real one-line description but exists for 10 of 60
+ * records; the abstract exists for all 60, so two sentences of it is the reliable fallback.
+ */
+const leadText = (() => {
+  const fn = (paper.function || "").trim();
+  if (fn) return fn;
+  const abstract = (publication?.abstract || "").replace(/\s+/g, " ").trim();
+  if (!abstract) return "";
+  const sentences = abstract.match(/[^.!?]+[.!?]+/g) || [abstract];
+  return sentences.slice(0, 2).join(" ").trim();
+})();
+
+// Category and modality overlap, and differ only in case ("Liquid Handling" vs "liquid
+// handling"), which rendered the same word twice in the chip row.
+const recordChips = [
+  ...new Map([...paper.category, ...paper.modality].map((v) => [v.toLowerCase(), v])).values()
+];
+
+const recordTool = (paper.systemOrTechnology || "").split("|")[0].trim();
+const licenceValue = paper.artifactLicence?.value || "";
+const costDisplay = parseCost(recordCost).display;
+const files = orderFileTypes(paper.assetTypes ?? []);
+// Files the publisher hosts as supplementary information: each icon opens its file.
+const fileLinks = new Map(supplementLinksFor(paper).map((l) => [l.type, l.url]));
+const repoLabel = repoAccess?.maintenance === "unknown" ? "Deposit" : (repoAccess?.maintenance || "");
+const repoAge = repoAccess?.maintenance !== "unknown" ? (repoAccess?.ageLabel || "") : "";
+const measured = reported.metrics.filter((m) => m.status === "yes");
+const doiUrl = recordDoi && recordDoi !== "Missing" ? `https://doi.org/${recordDoi}` : "";
+const rebuildHref = `/rebuild-report?build=${encodeURIComponent(`${paper.title}${doiUrl ? ` — ${recordDoi}` : ""}`)}`;
+
+/**
+ * What this record lacks, and a GitHub issue pre-filled to supply it. The template's
+ * fields are `record` and `notes` (its checkboxes cannot be pre-filled from a URL), so the
+ * record is named by title and page address and the gaps are listed in the notes.
+ */
+/**
+ * The whole abstract is shown only when the article itself is under a Creative Commons
+ * licence (54 of 60). For the rest, the opening two sentences are quoted and the reader is
+ * sent to the publisher for the remainder.
+ */
+const abstractIsOpen = /^cc/i.test(String(openAlex?.openAccess?.license || ""));
+const abstractExcerpt = (() => {
+  const text = (publication?.abstract || "").replace(/\s+/g, " ").trim();
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  return sentences.slice(0, 2).join(" ").trim();
+})();
+
+/** The two tag lists are empty for most records; the column is dropped rather than shown as "none yet". */
+const hasSignalTags = paper.technicalSkillsNeeded.length > 0 || paper.democratizingFeatures.length > 0;
+
+const recordGaps = [
+  !costDisplay && "cost",
+  !licenceValue && "licence on the design files",
+  !paper.repo && "link to the design files",
+  (paper.assetTypes ?? []).length === 0 && "which files exist (CAD, bill of materials, firmware…)"
+].filter(Boolean) as string[];
+const completeHref = (() => {
+  const params = new URLSearchParams({ template: "complete-record.yml" });
+  params.set("title", `Complete record: ${paper.title}`);
+  params.set("record", `${paper.title} — ${siteUrl}/papers/${paper.slug}${doiUrl ? ` — ${recordDoi}` : ""}`);
+  if (recordGaps.length) params.set("notes", `Missing in the index today: ${recordGaps.join("; ")}.`);
+  return `${githubRepoUrl}/issues/new?${params.toString()}`;
+})();
+
+/**
+ * The workbook's "primary link" is, for most records, the same publisher page the DOI
+ * resolves to. It earns its own button only when it is a different copy of the paper:
+ * PubMed Central, a preprint server, an institutional repository, a JoVE protocol.
+ */
+const PUBLISHER_HOSTS = /(^|\.)(doi\.org|nature\.com|mdpi\.com|sciencedirect\.com|rsc\.org|acs\.org|frontiersin\.org|wiley\.com|springer\.com|science\.org|hardware-x\.com|cell\.com|liebertpub\.com|iop\.org|tandfonline\.com)$/i;
+const sourceHost = (() => { try { return new URL(paper.primaryLink || "").hostname.replace(/^www\./, ""); } catch { return ""; } })();
+const sourceCopy = !paper.primaryLink || !doiUrl
+  ? (paper.primaryLink ? { label: "Source page", title: "The page the corpus links this record to" } : null)
+  : PUBLISHER_HOSTS.test(sourceHost)
+    ? null
+    : /ncbi\.nlm\.nih\.gov$/i.test(sourceHost)
+      ? { label: "Open access copy", title: "Free full text on PubMed Central" }
+      : /biorxiv\.org|medrxiv\.org|arxiv\.org/i.test(sourceHost)
+        ? { label: "Preprint", title: "The preprint version" }
+        : /jove\.com/i.test(sourceHost)
+          ? { label: "JoVE protocol", title: "The video protocol on JoVE" }
+          : { label: "Repository copy", title: `Another copy of the paper on ${sourceHost}` };
+/** Short labels under the five marks, in the marks' own order. */
+const markLabels: Record<string, string> = {
+  "motion-accuracy": "Motion",
+  "volumetric-accuracy": "Volume",
+  "cell-viability": "Viability",
+  "unattended-operation": "Unattended",
+  "standard-compliance": "Standard"
+};
+---
+
+<BaseLayout title={`${paper.title} | DIY Biofabrication Atlas`} description={paper.summary || paper.whyItMatters}>
+  <DetailShell back={{ href: "/browse", label: "All builds" }}>
+    {/* The page is two columns above 1000px: what the paper is and what it reports on the
+        left, the facts a laboratory decides on -- cost, licence, files, ease -- in a rail
+        that stays put while the left column scrolls. The rail states only what the paper
+        states, like the card; nothing on it says "not found". */}
+    <header class="record-head">
+      <p class="record-kicker" title="Area and technique · instrument · year · venue">
+        {[...recordChips, recordTool, paper.year, paper.venue].filter(Boolean).join(" · ")}
+      </p>
+      <h1>{paper.title}</h1>
+      {leadText && <p class="record-lead">{leadText}</p>}
+    </header>
+
+    <div class="record-grid">
+      <div class="record-main">
+        {reported.assessed && (
+          <section class="record-section" aria-labelledby="reported-heading">
+            <div class="section-head">
+              <h2 id="reported-heading">Performance the paper reports</h2>
+              <span class="section-figure">
+                {reported.fullTextRead
+                  ? <><b>{reported.reportedCount}</b> of {METRICS.length}</>
+                  : <i>full text not held</i>}
+              </span>
+            </div>
+            <ol class="perf-grid" aria-label="The five performance measurements">
+              {METRICS.map((m) => {
+                const found = reported.metrics.find((x) => x.id === m.id);
+                const status = !reported.fullTextRead ? "na" : found?.status === "yes" ? "yes" : "no";
+                return (
+                  <li class={`perf-cell perf-cell--${status}`} title={`${m.label}: ${status === "yes" ? `reported${found?.value ? `, ${found.value}` : ""}` : status === "no" ? "not reported in the paper" : "not assessed, full text not held"}`}>
+                    <svg class={`metric metric--${status}`} aria-hidden="true"><use href={`#mi-${m.id}`} /></svg>
+                    <span class="perf-label">{markLabels[m.id]}</span>
+                    <span class="perf-value">
+                      {status === "yes" ? (found?.value || "stated") : status === "no" ? "—" : "n/a"}
+                    </span>
+                    <span class="sr-only">{m.label}: {status === "yes" ? "reported" : status === "no" ? "not reported" : "not assessed"}</span>
+                  </li>
+                );
+              })}
+            </ol>
+            {measured.length > 0 && (
+              <ul class="perf-evidence">
+                {measured.map((m) => (
+                  <li>
+                    <div class="perf-evidence-head">
+                      <strong>{m.label}</strong>
+                      {m.value && <span class="perf-evidence-value">{m.value}</span>}
+                    </div>
+                    {m.evidence && <blockquote>{m.evidence}</blockquote>}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {reported.fullTextRead && measured.length === 0 && (
+              <p class="section-note">The full text was read and states no figure for any of the five.</p>
+            )}
+          </section>
+        )}
+
+        {assessment.assessed && (
+          <section class="record-section" aria-labelledby="criteria-heading">
+            <div class="section-head">
+              <h2 id="criteria-heading">How hard this is to adopt</h2>
+              <span class="section-figure">
+                {assessment.rubricMapped ? <><b>{assessment.averageScore?.toFixed(1)}</b> of 5, higher is easier</> : <i>not scored</i>}
+              </span>
+            </div>
+            <p class="section-note">
+              Each score is shown against the range the other 59 builds actually occupy, because no
+              criterion uses the full 1–5 scale. These describe how reproducible the build is, not how
+              good the science is.
+            </p>
+            <ul class="criteria-grid">
+              {shownCriteria.map((criterion) => (
+                <li class="criterion">
+                  <div class="criterion-head">
+                    <h3 title={criterionQuestion.get(criterion.id)}>{criterion.shortName || criterion.name}</h3>
+                    {criterion.value === null
+                      ? <span class="criterion-score criterion-score--absent" title="The curator found nothing in the paper to score this on">not scored</span>
+                      : <span class="criterion-score" title={`Scored ${criterion.value} of 5; the other builds span ${criterion.observedMin} to ${criterion.observedMax} on this criterion`}><b>{criterion.value}</b><i>/{criterion.observedMin}–{criterion.observedMax}</i></span>}
+                  </div>
+                  {criterion.value !== null && (
+                    <div
+                      class="criterion-bar"
+                      role="img"
+                      title={`${criterion.value} of 5; greyed steps are values no build in the corpus reaches`}
+                      aria-label={`Scores ${criterion.value}; other builds score between ${criterion.observedMin} and ${criterion.observedMax}`}
+                    >
+                      {[1, 2, 3, 4, 5].map((step) => (
+                        <i
+                          class:list={[
+                            "criterion-step",
+                            step === criterion.value && "is-value",
+                            (step < (criterion.observedMin ?? 1) || step > (criterion.observedMax ?? 5)) && "is-unused"
+                          ]}
+                        ></i>
+                      ))}
+                    </div>
+                  )}
+                  {criterion.rationale && <p class="criterion-why">{criterion.rationale}</p>}
+                </li>
+              ))}
+            </ul>
+            {withheldCriteria.length > 0 && (
+              <details class="criteria-withheld">
+                <summary>{withheldCriteria.length} further criteria are recorded but not shown</summary>
+                <ul>
+                  {withheldCriteria.map((criterion) => {
+                    const stat = criteriaStats.find((entry) => entry.id === criterion.id);
+                    return (
+                      <li>
+                        <strong>{criterion.name}</strong>
+                        {criterion.value !== null && <span> — scored {criterion.value}</span>}
+                        {stat?.withheldReason && <span class="muted"> ({stat.withheldReason}), so it cannot separate one build from another.</span>}
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p class="muted">Both remain in the published dataset.</p>
+              </details>
+            )}
+          </section>
+        )}
+
+        <section class="rebuild-cta" aria-labelledby="rebuild-cta-heading">
+          <div>
+            <h2 id="rebuild-cta-heading">Have you built this?</h2>
+            <p>Report what it took, including attempts that stalled. A failed build tells the next laboratory what the documentation leaves out.</p>
+          </div>
+          <a class="button-link" href={rebuildHref} title="Opens the rebuild report with this build filled in">Report a rebuild</a>
+        </section>
+        {recordGaps.length > 0 && (
+          <section class="rebuild-cta gap-cta" aria-labelledby="gap-cta-heading">
+            <div>
+              <h2 id="gap-cta-heading">Know what this record is missing?</h2>
+              <p>The index has no {recordGaps.length === 1 ? recordGaps[0] : `${recordGaps.slice(0, -1).join(", ")} or ${recordGaps.at(-1)}`} for this build. If you are an author or have built it, you know; a GitHub issue pre-filled with this record takes a minute.</p>
+            </div>
+            <a class="button-link secondary" href={completeHref} target="_blank" rel="noreferrer" title="Opens a GitHub issue naming this record and what it lacks">Fill the gap</a>
+          </section>
+        )}
+
+    <section id="metadata" class="detail-section record-panel"><CollapsibleBlock title="Record metadata">
+    <section class="metadata-groups">
+      <section class="metadata-group">
+        <h2>Publication</h2>
+        <dl class="meta-dl">
+          <div><dt>Year</dt><dd>{paper.year ?? "Unknown"}</dd></div>
+          <div><dt>Venue</dt><dd>{paper.venue || "Unknown"}</dd></div>
+          <div><dt>DOI</dt><dd>{recordDoi}</dd></div>
+          <div><dt>Type</dt><dd>{paper.type || "Unspecified"}</dd></div>
+        </dl>
+      </section>
+      <section class="metadata-group">
+        <h2>Implementation</h2>
+        <dl class="meta-dl">
+          <div><dt>Open-source</dt><dd>{paper.openSource === null ? "Uncertain" : paper.openSource ? "Yes" : "No"}</dd></div>
+          <div><dt>Repository</dt><dd>{paper.repo ? <a href={`/repos/${paper.repo.slug}`}>Linked record</a> : "Not linked"}</dd></div>
+          {paper.repo?.accessibility?.checked && (
+            <div>
+              <dt>Repository still accessible</dt>
+              <dd>
+                {paper.repo.accessibility.accessible ? "Yes" : "No"}
+                {paper.repo.accessibility.archived ? " (archived)" : ""}
+                {paper.repo.accessibility.lastActivity
+                  ? `, last activity ${paper.repo.accessibility.lastActivity.slice(0, 10)}`
+                  : ""}
+                {paper.repo.accessibility.checkedAt
+                  ? ` — checked ${paper.repo.accessibility.checkedAt.slice(0, 10)}`
+                  : ""}
+              </dd>
+            </div>
+          )}
+          <div><dt>Build complexity</dt><dd>{paper.buildComplexity || "Unspecified"}</dd></div>
+          <div><dt>Approximate cost</dt><dd>{recordCost}</dd></div>
+        </dl>
+      </section>
+    </section>
+    </CollapsibleBlock></section>
+
+    {publication && (
+      <section id="publication" class="detail-section record-panel"><CollapsibleBlock title="Publication data">
+        <section class="publication-record" aria-labelledby="publication-heading">
+          <p class="publication-provenance" id="publication-heading">Matched by {publication.matchMethod} · retrieved {publication.fetchedAt.slice(0, 10)}</p>
+
+          {publication.abstract && (
+            <div class="publication-abstract">
+              <h3>Abstract</h3>
+              {abstractIsOpen ? (
+                <p>{publication.abstract}</p>
+              ) : (
+                <p>{abstractExcerpt} <a href={doiUrl || paper.primaryLink} target="_blank" rel="noreferrer" title="The article is not under a Creative Commons licence, so only the opening is quoted here">Full abstract at the publisher<span aria-hidden="true"> ↗</span></a></p>
+              )}
+            </div>
+          )}
+
+          <div class="publication-grid">
+            <section>
+              <h3>Bibliographic details</h3>
+              <dl class="meta-dl compact-meta-dl">
+                <div><dt>Published</dt><dd>{openAlex?.publicationDate || crossref?.publishedDate || "Unknown"}</dd></div>
+                <div><dt>Journal/source</dt><dd>{crossref?.journal || openAlex?.source || paper.venue || "Unknown"}</dd></div>
+                <div><dt>Publisher</dt><dd>{crossref?.publisher || "Unknown"}</dd></div>
+                <div><dt>DOI</dt><dd>{publication.resolvedDoi || "Missing"}</dd></div>
+                <div><dt>Type</dt><dd>{crossref?.type || openAlex?.type || paper.type || "Unspecified"}</dd></div>
+                <div><dt>Language</dt><dd>{openAlex?.language || crossref?.language || "Unknown"}</dd></div>
+                <div><dt>Volume / issue</dt><dd>{[crossref?.volume, crossref?.issue].filter(Boolean).join(" / ") || "Not supplied"}</dd></div>
+                <div><dt>Pages</dt><dd>{crossref?.pages || "Not supplied"}</dd></div>
+                <div><dt>ISSN</dt><dd>{crossref?.issn.join(", ") || "Not supplied"}</dd></div>
+              </dl>
+            </section>
+
+            <section>
+              <h3>Access and metrics</h3>
+              <dl class="meta-dl compact-meta-dl">
+                <div><dt>Open access</dt><dd>{openAlex ? (openAlex.openAccess.isOpen ? "Yes" : "No") : "Unknown"}</dd></div>
+                <div><dt>OA status</dt><dd>{openAlex?.openAccess.status || "Unknown"}</dd></div>
+                <div><dt>License</dt><dd>{openAlex?.openAccess.license || crossref?.licenses[0] || "Not supplied"}</dd></div>
+                <div><dt>Version</dt><dd>{openAlex?.openAccess.version || "Unknown"}</dd></div>
+                <div><dt>Cited by</dt><dd>{openAlex?.citedByCount ?? crossref?.citedByCount ?? "Unknown"}</dd></div>
+                <div><dt>References</dt><dd>{openAlex?.referencesCount ?? crossref?.referencesCount ?? "Unknown"}</dd></div>
+                <div><dt>Retracted</dt><dd>{openAlex ? (openAlex.isRetracted ? "Yes" : "No") : "Unknown"}</dd></div>
+              </dl>
+              <div class="publication-links">
+                {openAlex?.openAccess.url && <a href={openAlex.openAccess.url} target="_blank" rel="noreferrer">Open-access landing page</a>}
+              </div>
+            </section>
+          </div>
+
+          {publicationAuthors.length > 0 && (
+            <section class="publication-authors">
+              <h3>Authors and affiliations</h3>
+              <ol>
+                {publicationAuthors.map((author) => (
+                  <li>
+                    <span>
+                      {author.orcid ? <a href={author.orcid} target="_blank" rel="noreferrer">{author.name}</a> : author.name}
+                      {author.corresponding && <small>Corresponding author</small>}
+                    </span>
+                    <span>{[...(author.institutions || []), ...(author.affiliations || [])].join(" · ")}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          {publicationTopics.length > 0 && (
+            <section class="publication-taxonomy">
+              <h3>Topics and keywords</h3>
+              <div class="chip-row">{publicationTopics.map((topic) => <span class="chip" title="Topic or keyword from OpenAlex and the publisher">{topic}</span>)}</div>
+            </section>
+          )}
+
+          {publicationFunders.length > 0 && (
+            <section class="publication-funding">
+              <h3>Funding</h3>
+              <ul>{publicationFunders.map((funder) => <li>{funder}</li>)}</ul>
+            </section>
+          )}
+        </section>
+      </CollapsibleBlock></section>
+    )}
+
+    <section id="signals" class="detail-section record-panel"><CollapsibleBlock title="Perspective and practical signals">
+    <section class:list={["detail-content-grid", !hasSignalTags && "detail-content-grid--single"]}>
+      <div class="detail-block">
+        <h2>Why it matters</h2>
+        <p>{paper.whyItMatters || paper.summary || "No narrative note curated yet."}</p>
+        <h2>Limitations</h2>
+        <p>{paper.limitation || "No limitation note curated yet."}</p>
+      </div>
+      {hasSignalTags && (
+        <div class="detail-block">
+          {paper.technicalSkillsNeeded.length > 0 && (
+            <>
+              <h2>Skills needed</h2>
+              <div class="chip-row">{paper.technicalSkillsNeeded.map((item) => <span class="chip" title="Skill the curator judged necessary to build it">{item}</span>)}</div>
+            </>
+          )}
+          {paper.democratizingFeatures.length > 0 && (
+            <>
+              <h2>Democratizing features</h2>
+              <div class="chip-row">{paper.democratizingFeatures.map((item) => <span class="chip" title="Feature the curator noted as lowering the barrier to adoption">{item}</span>)}</div>
+            </>
+          )}
+        </div>
+      )}
+    </section>
+    </CollapsibleBlock></section>
+
+    <section id="related" class="detail-section record-panel"><CollapsibleBlock title="Related papers">
+      <div class="related-grid" id="paper-related-grid">
+        {related.map((item) => (
+          <a class="related-card" href={`/papers/${item.slug}`}>
+            <strong>{item.title}</strong>
+            <span class="muted">{item.category.join(" · ")}</span>
+          </a>
+        ))}
+      </div>
+      <Pagination id="paper-related-pagination" />
+    </CollapsibleBlock></section>
+      </div>
+
+      <aside class="record-rail" aria-label="Facts and links">
+        <dl class="facts">
+          {costDisplay && (
+            <div>
+              <dt title="Build cost as the paper states it">Cost</dt>
+              <dd class="facts-price" title={`As stated: ${recordCost}`}>{costDisplay}{parseCost(recordCost).partial && <abbr title="Excludes the printer or robot this mounts on"> + host</abbr>}</dd>
+            </div>
+          )}
+          {licenceValue && (
+            <div>
+              <dt title="Licence on the design files, not on the article">Licence</dt>
+              <dd title={paper.artifactLicence?.source ? `Read from ${paper.artifactLicence.source}` : undefined}>{licenceValue}</dd>
+            </div>
+          )}
+          {paper.repo && (
+            <div>
+              <dt>Design files</dt>
+              <dd>
+                <a class={`facts-repo facts-repo--${repoAccess?.maintenance || "unknown"}`} href={paper.repo.url} target="_blank" rel="noreferrer" title={`Design-file repository, ${repoLabel.toLowerCase()}${repoAge ? `, last activity ${repoAge}` : ""}: ${paper.repo.name}`}>
+                  {repoLabel}{repoAge && <i> · {repoAge}</i>}<span aria-hidden="true"> ↗</span>
+                </a>
+                {repoAccess?.checkedAt && <small>checked {repoAccess.checkedAt.slice(0, 10)}</small>}
+              </dd>
+            </div>
+          )}
+          {files.length > 0 && (
+            <div>
+              <dt>Files included</dt>
+              <dd>
+                <span class="file-icon-row">
+                  {files.map((f) =>
+                    fileLinks.get(f.id) ? (
+                      <a class="file-link" href={fileLinks.get(f.id)} target="_blank" rel="noreferrer" title={`${f.title}. Opens the publisher's supplementary file.`}><FileIcon type={f} withLabel /><span aria-hidden="true"> ↗</span></a>
+                    ) : (
+                      <FileIcon type={f} withLabel />
+                    )
+                  )}
+                </span>
+                {fileLinks.size > 0 && !paper.repo && <small>Supplied as the article's supplementary information; each icon opens the file.</small>}
+              </dd>
+            </div>
+          )}
+          {assessment.rubricMapped && (
+            <div>
+              <dt title="Average of the rubric criteria scored for this build; higher is easier to adopt">Ease</dt>
+              <dd title={`Average of ${assessment.scoredCriteriaCount} scored criteria`}><b>{assessment.averageScore?.toFixed(1)}</b> <i>of 5</i></dd>
+            </div>
+          )}
+          <div>
+            <dt title="Skill level a laboratory needs to build it, graded by the curator">Skill needed</dt>
+            <dd>{paper.derived.skillLevel}</dd>
+          </div>
+          <div>
+            <dt title="How complete the build documentation is, graded by the curator">Documentation</dt>
+            <dd>{paper.derived.documentationTier}</dd>
+          </div>
+        </dl>
+
+        <div class="rail-actions">
+          {doiUrl && <ButtonLink href={doiUrl} external title={`The article at the publisher, via DOI ${recordDoi}`}>Article</ButtonLink>}
+          {sourceCopy && <ButtonLink href={paper.primaryLink} variant={doiUrl ? "secondary" : "primary"} external title={sourceCopy.title}>{sourceCopy.label}</ButtonLink>}
+          <ButtonLink href={`/graph?node=${paper.id}`} variant="secondary" title="Show this record and what it connects to on the relationship graph">Open in graph</ButtonLink>
+          {recordGaps.length > 0 && <ButtonLink href={completeHref} variant="secondary" external title={`Supply what the index lacks for this build: ${recordGaps.join(", ")}`}>Fill a gap</ButtonLink>}
+        </div>
+
+        {linkedTopics.length > 0 && (
+          <div class="rail-topics">
+            <span class="facts-label">Topics</span>
+            <div class="chip-row">{linkedTopics.map((topic) => <a class="chip" href={`/topics/${topic.slug}`} title={`All builds in ${topic.name}`}>{topic.name}</a>)}</div>
+          </div>
+        )}
+        {openAlex?.url && (
+          <p class="rail-meta"><a href={openAlex.url} target="_blank" rel="noreferrer" title="Citations, topics and funders as OpenAlex indexes them">Citations and topics on OpenAlex<span aria-hidden="true"> ↗</span></a></p>
+        )}
+      </aside>
+    </div>
+  </DetailShell>
+  <script>
+    import { initGridPagination } from "../../scripts/pagination.mjs";
+
+    initGridPagination({
+      gridId: "paper-related-grid",
+      itemSelector: ".related-card",
+      navId: "paper-related-pagination",
+      pageSize: 24
+    });
+
+
+  </script>
+</BaseLayout>
+
+<style>
+  /* --- Head: kicker, title, lead. No panel around it; the page is the panel. --- */
+  .record-head { max-width: 78ch; padding: var(--space-2) 0 var(--space-4); }
+  .record-kicker { margin: 0 0 var(--space-2); color: var(--muted); font-size: var(--text-xs); }
+  .record-head h1 {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-2xl);
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+  .record-lead {
+    margin: 0;
+    max-width: 70ch;
+    font-size: var(--text-md);
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+
+  /* --- Two columns from 1000px: reading on the left, the facts rail on the right. --- */
+  .record-grid { display: grid; gap: var(--space-6); align-items: start; }
+  @media (min-width: 1000px) {
+    .record-grid { grid-template-columns: minmax(0, 1fr) 19rem; gap: var(--space-8); }
+    .record-rail {
+      position: sticky;
+      top: calc(var(--control-height) + var(--space-8));
+      max-height: calc(100dvh - var(--control-height) - var(--space-10));
+      overflow-y: auto;
+    }
+  }
+  .record-main { display: grid; gap: var(--space-6); min-width: 0; }
+
+  /* --- Sections share one head: an h2 and, on the right, the one figure that sums it up. --- */
+  .record-section { padding-top: var(--space-4); border-top: 1px solid var(--line); }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+  .section-head h2 { margin: 0; font-size: var(--text-lg); }
+  .section-figure { color: var(--muted); font-size: var(--text-xs); white-space: nowrap; }
+  .section-figure b { color: var(--accent); font-size: var(--text-lg); font-variant-numeric: tabular-nums; }
+  .section-figure i { font-style: normal; }
+  .section-note { max-width: 70ch; margin: var(--space-2) 0 0; color: var(--muted); font-size: var(--text-sm); line-height: 1.55; }
+
+  /* --- The five marks, each above its name and the value the paper gave. One row, the same
+         five every time, so a reader learns the row once and reads every record with it. --- */
+  .perf-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--space-2);
+    margin: var(--space-4) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .perf-cell {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-1);
+    padding: var(--space-3) var(--space-2);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    text-align: center;
+  }
+  .perf-cell .metric { width: 1.6rem; height: 1.6rem; }
+  .perf-cell--yes { border-color: color-mix(in oklab, var(--accent) 40%, var(--line)); }
+  .perf-label { font-size: var(--text-2xs); color: var(--muted); }
+  .perf-value { font-size: var(--text-xs); font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .perf-cell--no .perf-value, .perf-cell--na .perf-value { color: var(--muted); font-weight: 400; }
+
+  .perf-evidence { display: grid; gap: var(--space-3); margin: var(--space-4) 0 0; padding: 0; list-style: none; }
+  .perf-evidence-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); font-size: var(--text-xs); }
+  .perf-evidence-value { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .perf-evidence blockquote {
+    margin: var(--space-1) 0 0;
+    padding-left: var(--space-3);
+    border-left: 2px solid var(--line-strong);
+    color: var(--muted);
+    font-size: var(--text-xs);
+    line-height: 1.55;
+  }
+
+  /* --- Criteria, two to a row where there is room. --- */
+  .criteria-grid {
+    display: grid;
+    gap: var(--space-2);
+    margin: var(--space-4) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (min-width: 640px) { .criteria-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .criterion { padding: var(--space-3); border: 1px solid var(--line); background: var(--surface); }
+  .criterion-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+  .criterion-head h3 { margin: 0; font-size: var(--text-sm); }
+  .criterion-score { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .criterion-score b { color: var(--accent); font-size: var(--text-md); }
+  .criterion-score i { font-style: normal; color: var(--muted); font-size: var(--text-2xs); }
+  .criterion-score--absent { color: var(--muted); font-size: var(--text-2xs); }
+  /* Five steps, but the ones no build in the corpus ever reaches are drawn as absent, so a
+     mid score is not misread as a poor one. */
+  .criterion-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin: var(--space-2) 0 0; }
+  .criterion-step { height: 0.35rem; background: var(--surface-alt); border: 1px solid var(--line-strong); }
+  .criterion-step.is-unused { border-style: dashed; border-color: var(--line); background: transparent; }
+  .criterion-step.is-value { background: var(--accent); border-color: var(--accent); }
+  .criterion-why { margin: var(--space-2) 0 0; color: var(--muted); font-size: var(--text-sm); line-height: 1.5; }
+  .criteria-withheld { margin-top: var(--space-3); font-size: var(--text-xs); }
+  .criteria-withheld summary { cursor: pointer; color: var(--muted); }
+  .criteria-withheld ul { margin: var(--space-3) 0 var(--space-2); padding-left: var(--space-4); display: grid; gap: var(--space-2); }
+  .criteria-withheld p { margin: 0; }
+
+  /* --- Rebuild call, one strip. --- */
+  .rebuild-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    padding: var(--space-4);
+    border: 1px solid color-mix(in oklab, var(--accent) 28%, var(--line));
+    background: var(--surface);
+  }
+  .rebuild-cta h2 { margin: 0 0 var(--space-1); font-size: var(--text-sm); }
+  /* Sections are grid children of .record-main; its gap spaces them, no extra margins. */
+  .record-main :global(.collapsible-block) { margin: 0; }
+  :global(.detail-content-grid--single) { grid-template-columns: minmax(0, 1fr); }
+  .rebuild-cta p { margin: 0; max-width: 60ch; color: var(--muted); font-size: var(--text-sm); }
+
+  /* --- The rail: facts, then the ways out. --- */
+  .record-rail { display: grid; gap: var(--space-4); padding: var(--space-4); border: 1px solid var(--line); background: var(--surface); }
+  .facts { display: grid; gap: var(--space-3); margin: 0; }
+  .facts > div { display: grid; gap: 0.15rem; padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }
+  .facts > div:last-child { border-bottom: 0; padding-bottom: 0; }
+  .facts dt, .facts-label { color: var(--muted); font-size: var(--text-2xs); }
+  .facts dd { margin: 0; font-size: var(--text-xs); overflow-wrap: anywhere; }
+  .facts dd b { font-size: var(--text-md); font-variant-numeric: tabular-nums; }
+  .facts dd i { font-style: normal; color: var(--muted); }
+  .facts dd small { display: block; color: var(--muted); font-size: var(--text-2xs); }
+  .facts-price { font-size: var(--text-md); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .facts-price abbr { font-size: var(--text-2xs); font-weight: 400; color: var(--accent-2-ink); text-decoration: none; }
+  .facts-repo { font-weight: 700; text-transform: capitalize; }
+  .facts-repo i { font-weight: 400; text-transform: none; }
+  .facts-repo--active { color: var(--status-success); }
+  .facts-repo--aging { color: var(--status-warning); }
+  .facts-repo--stale, .facts-repo--unknown { color: var(--muted); }
+  .facts .file-icon-row { gap: var(--space-2) var(--space-3); }
+  .facts .file-link { color: var(--accent); text-decoration: none; }
+  .facts .file-link:hover { text-decoration: underline; }
+  .rail-actions { display: grid; gap: var(--space-2); }
+  .rail-meta { margin: var(--space-3) 0 0; font-size: var(--text-2xs); }
+  .rail-meta a { color: var(--muted); text-decoration: none; }
+  .rail-meta a:hover { text-decoration: underline; }
+  .rail-actions .button-link { width: 100%; }
+  .rail-topics { display: grid; gap: var(--space-2); }
+
+  /* --- Collapsed blocks further down: publication record and the curator's notes. --- */
+  .publication-record { margin: 0; }
+  .publication-provenance { margin: 0 0 var(--space-3); color: var(--muted); font-size: var(--text-2xs); }
+  .publication-abstract { padding: 0 0 var(--space-4); border-bottom: 1px solid var(--line); }
+  .publication-record h3 { margin: 0 0 var(--space-3); font-size: var(--text-sm); }
+  .publication-abstract p { max-width: 80ch; margin: 0; font-size: var(--text-sm); line-height: 1.6; }
+  .publication-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6); padding: var(--space-5) 0; }
+  .compact-meta-dl { gap: var(--space-2); }
+  .compact-meta-dl > div { grid-template-columns: 7rem minmax(0, 1fr); padding-bottom: var(--space-2); }
+  .publication-links { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-4); font-size: var(--text-xs); font-weight: 700; }
+  .publication-links a { color: var(--accent); }
+  .publication-authors, .publication-taxonomy, .publication-funding { padding: var(--space-4) 0 0; margin-top: var(--space-4); border-top: 1px solid var(--line); }
+  .publication-record > :last-child { padding-bottom: 0; }
+  .publication-authors ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2) var(--space-6); margin: 0; padding-left: var(--space-5); }
+  .publication-authors li { padding-left: var(--space-1); font-size: var(--text-xs); }
+  .publication-authors li > span { display: block; }
+  .publication-authors li > span:last-child { margin-top: 0.15rem; color: var(--muted); }
+  .publication-authors small { display: inline-block; margin-left: var(--space-2); color: var(--accent); font-size: var(--text-2xs); font-weight: 700; }
+  .publication-funding ul { margin: 0; }
+
+  @media (max-width: 640px) {
+    .record-head h1 { font-size: var(--text-xl); }
+    .record-lead { font-size: var(--text-sm); }
+    .perf-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-1); }
+    .perf-cell { padding: var(--space-2) 0.1rem; }
+    .perf-label { font-size: 0.65rem; }
+    .publication-grid, .publication-authors ol { grid-template-columns: 1fr; }
+    .compact-meta-dl > div { grid-template-columns: 1fr; }
+  }
+</style>

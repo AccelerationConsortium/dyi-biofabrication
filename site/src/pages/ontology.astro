@@ -1,0 +1,113 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ScanHeader from "../components/ScanHeader.astro";
+import ButtonLink from "../components/ButtonLink.astro";
+import { ontology } from "../data/ontology";
+---
+
+<BaseLayout title="Ontology | DIY Biofabrication Atlas" description="Public schema and relation model for machine-readable use of the DIY Biofabrication Atlas.">
+  <section class="ontology-page">
+    <ScanHeader
+      eyebrow="Ontology"
+      title="Machine-readable structure for papers, tools, and build evidence."
+      description="Documents the public entity model so agents can use stable JSON instead of scraping page text."
+    />
+    <div class="detail-actions">
+      <ButtonLink href="/api/ontology.json">Ontology JSON</ButtonLink>
+      <ButtonLink href="/api/graph.json" variant="secondary">Graph JSON</ButtonLink>
+      <ButtonLink href="/api/papers.json" variant="secondary">Papers JSON</ButtonLink>
+    </div>
+  </section>
+
+  <section class="ontology-entities">
+    {ontology.entities.map((entity) => (
+      <article class="panel ontology-entity">
+        <h2>{entity.id}</h2>
+        <p class="muted">{entity.description}</p>
+        <div class="chip-row">
+          {entity.keyFields.map((field) => <span class="chip" title={`Field "${field}" in each ${entity.id} record of the API`}>{field}</span>)}
+        </div>
+      </article>
+    ))}
+  </section>
+
+  <section class="panel detail-block ontology-relations">
+    <h2 class="zone-title">Relations</h2>
+    <ul>
+      {ontology.relations.map((relation) => (
+        <li><strong>{relation.id}</strong>: {relation.source} → {relation.target} · {relation.description}</li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="panel detail-block">
+    <h2 class="zone-title">Controlled fields</h2>
+    <div class="ontology-controls">
+      {Object.entries(ontology.controlledFields).map(([field, values]) => (
+        <div class="panel ontology-control-block">
+          <h3>{field}</h3>
+          <div class="chip-row">
+            {values.map((value) => <span class="chip" title="A value this vocabulary allows">{value}</span>)}
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .ontology-page {
+    padding: 0;
+  }
+
+  .ontology-entities {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+    margin: var(--space-6) 0;
+  }
+
+  .ontology-entity {
+    padding: var(--space-5);
+  }
+
+  .ontology-entity h2 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-lg);
+    font-family: var(--font-mono);
+  }
+
+  .ontology-relations {
+    margin-bottom: var(--space-4);
+  }
+
+  .ontology-relations ul {
+    margin: 0;
+    padding-left: var(--space-5);
+    max-width: 75ch;
+    font-size: var(--text-xs);
+  }
+
+  .ontology-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+
+  .ontology-control-block {
+    padding: var(--space-4);
+  }
+
+  .ontology-control-block h3 {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-sm);
+    font-family: var(--font-sans);
+  }
+
+  @media (max-width: 900px) {
+    .ontology-entities,
+    .ontology-controls {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,16 @@
+---
+export interface Props {
+  href: string;
+  variant?: "primary" | "secondary" | "ghost";
+  external?: boolean;
+  block?: boolean;
+  title?: string;
+}
+
+const { href, variant = "primary", external = false, block = false, title } = Astro.props;
+const className = variant === "primary" ? "button-link" : `button-link ${variant}`;
+---
+
+<a class:list={[className, block && "button-link--block"]} href={href} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined} title={title}>
+  <slot />
+</a>

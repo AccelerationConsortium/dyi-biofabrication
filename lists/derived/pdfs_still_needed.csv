@@ -1,0 +1,20 @@
+title,doi,open_access,oa_status,download_url,venue,year
+A 3D-Printed Plate Handler for Automated Handling of Well Plates on the Opentrons OT-2,10.5206/joh.v9i1.22756,yes,gold,https://doi.org/10.5206/joh.v9i1.22756,Journal of Open Hardware,2025
+A robot-assisted acoustofluidic end effector,10.1038/s41467-022-34167-y,yes,gold,https://doi.org/10.1038/s41467-022-34167-y,Nature Communications,2022
+A simple method of fabricating mask-free microfluidic devices for biological analysis,10.1063/1.3487796,yes,bronze,https://doi.org/10.1063/1.3487796,,2010
+An open source extrusion bioprinter based on the E3D motion system and tool changer to enable FRESH and multimaterial bioprinting,10.1038/s41598-021-00931-1,yes,gold,https://www.nature.com/articles/s41598-021-00931-1,Scientific Reports,2021
+"Design of an Open-Source, Low-Cost Bioink and Food Melt Extrusion 3D Printer",10.3791/59834,no,closed,https://doi.org/10.3791/59834,JoVE,2020
+Designing cost-effective open-source multihead 3D bioprinters,10.1089/genbio.2022.0021,yes,green,https://www.ncbi.nlm.nih.gov/pmc/articles/9426752,(see PMC),2022
+Development and implementation of a significantly low-cost 3D bioprinter using recycled scrap material,10.3389/fbioe.2023.1108396 | 10.3389/fbioe.2023.1108396/full,yes,gold,https://www.frontiersin.org/articles/10.3389/fbioe.2023.1108396/pdf,Frontiers in Bioengineering and Biotechnology,2023
+Development of a high-performance open-source 3D bioprinter,10.1038/s41598-022-26809-4,yes,gold,https://pmc.ncbi.nlm.nih.gov/articles/PMC9805454/,Scientific Reports,2022
+Fabrication and validation of an affordable DIY coaxial 3D extrusion bioprinter,10.1038/s41598-025-06478-9,yes,gold,https://www.nature.com/articles/s41598-025-06478-9,Scientific Reports,2025
+"Low-cost, versatile, and highly reproducible microfabrication pipeline to generate 3D-printed customised cell culture devices with complex designs",10.1371/journal.pbio.3002503,yes,gold,https://doi.org/10.1371/journal.pbio.3002503,,2024
+Nydus One Syringe Extruder (NOSE): A Prusa i3 3D printer conversion for bioprinting applications,10.1016/j.ohx.2019.e00069,yes,gold,https://doi.org/10.1016/j.ohx.2019.e00069,HardwareX,2019
+Open-source cell culture automation system with integrated cell counting for passaging microplate cultures,10.1101/2024.12.27.629034,yes,green,https://doi.org/10.1101/2024.12.27.629034,bioRxiv,2025
+Open-source personal pipetting robots with live-cell incubation and microscopy compatibility,10.1038/s41467-022-30643-7,yes,gold,https://www.nature.com/articles/s41467-022-30643-7,Nature Communications,2022
+"Open-source, community-driven microfluidics with Metafluidics",10.1038/nbt.3873,yes,hybrid,https://doi.org/10.1038/nbt.3873,,2017
+Principles of computer-controlled linear motion applied to an open-source affordable liquid handler for automated micropipetting,10.1038/s41598-020-70465-5,yes,gold,https://www.nature.com/articles/s41598-020-70465-5,Scientific Reports,2020
+Real-time AI-driven quality control for laboratory automation: a novel computer vision solution for the opentrons OT-2 liquid handling robot,10.1007/s10489-025-06334-3,yes,hybrid,https://doi.org/10.1007/s10489-025-06334-3,Applied Intelligence,2025
+Srishti: a custom-built laser-assisted 3D bioprinter for fabricating high-resolution biological constructs,10.1186/s44330-025-00051-6,yes,hybrid,https://link.springer.com/article/10.1186/s44330-025-00051-6,BMC Methods,2026
+The Enderstruder: An accessible open-source syringe extruder compatible with Ender series 3D printers,10.17605/osf.io/9arym,yes,green,https://doi.org/10.17605/osf.io/9arym,HardwareX,2024
+The ‘bIUreactor’: an open-source 3D tissue research platform,10.1007/s10439-024-03481-5,yes,hybrid,https://link.springer.com/article/10.1007/s10439-024-03481-5,Annals of Biomedical Engineering,2024

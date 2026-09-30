@@ -1,0 +1,24 @@
+---
+export interface GlanceItem {
+  label: string;
+  value: string;
+  /** Shown on hover, for a value that had to be shortened to fit. */
+  title?: string;
+}
+
+export interface Props {
+  items: GlanceItem[];
+}
+
+const { items } = Astro.props;
+const visible = items.slice(0, 4);
+---
+
+<dl class="at-a-glance" aria-label="At a glance">
+  {visible.map((item) => (
+    <div class="at-a-glance-item">
+      <dt>{item.label}</dt>
+      <dd title={item.title || undefined}>{item.value}</dd>
+    </div>
+  ))}
+</dl>

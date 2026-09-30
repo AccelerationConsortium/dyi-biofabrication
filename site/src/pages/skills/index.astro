@@ -1,0 +1,72 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SliceNote from "../../components/SliceNote.astro";
+import ExplorerShell from "../../components/ExplorerShell.astro";
+import EntityCard from "../../components/EntityCard.astro";
+import Select from "../../components/Select.astro";
+import SuggestRecordBanner from "../../components/SuggestRecordBanner.astro";
+import { skills, stats } from "../../data/loaders";
+const levels = [...new Set(skills.flatMap((s) => s.skillLevels))].sort();
+const formatLevel = (value: string) => `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+---
+
+<BaseLayout title="Skills | DIY Biofabrication Atlas" description="Browse skill barriers and technical requirements across DIY biofabrication tools.">
+  <SliceNote what="skills and barrier levels" />
+  <ExplorerShell
+    filterId="skills"
+    eyebrow="Skill explorer"
+    title="What can your lab build?"
+    description="Skill levels and technical tags aggregated from papers and tools."
+    searchPlaceholder="Search skill name or barrier level"
+    resultCount={skills.length}
+    gridClass="explorer-grid cols-3"
+  >
+    <SuggestRecordBanner slot="afterHeader" type="skill" label="skill" />
+    <Select
+      slot="selects"
+      id="skills-level"
+      label="Barrier level"
+      options={[{ value: "", label: "All levels", selected: true }, ...levels.map((l) => ({ value: l, label: formatLevel(l) }))]}
+    />
+    <Select
+      slot="selects"
+      id="skills-kind"
+      label="Type"
+      options={[
+        { value: "", label: "All types", selected: true },
+        { value: "level", label: "Barrier levels" },
+        { value: "tag", label: "Technical tags" }
+      ]}
+    />
+    {skills.map((skill) => (
+      <div
+        data-skill-item
+        data-search={`${skill.name} ${skill.skillLevels.join(" ")} ${skill.kind}`.toLowerCase()}
+        data-level={skill.skillLevels.join("|")}
+        data-kind={skill.kind}
+      >
+        <EntityCard
+          href={`/skills/${skill.slug}`}
+          title={skill.name}
+          description={`${skill.paperCount} papers · ${skill.toolCount} tools`}
+          chips={skill.skillLevels.map((l) => `${formatLevel(l)} barrier`)}
+        />
+      </div>
+    ))}
+  </ExplorerShell>
+
+  <script>
+    import { initExplorer } from "../../scripts/explorer-filters.mjs";
+
+    initExplorer({
+      filterId: "skills",
+      itemSelector: "[data-skill-item]",
+      getSearchText: (el) => el.getAttribute("data-search") || "",
+      filters: [
+        { id: "skills-level", param: "level", match: (el, v) => (el.getAttribute("data-level") || "").split("|").includes(v) },
+        { id: "skills-kind", param: "kind", match: (el, v) => el.getAttribute("data-kind") === v }
+      ],
+      toggles: []
+    });
+  </script>
+</BaseLayout>
