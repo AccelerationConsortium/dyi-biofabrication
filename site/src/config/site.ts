@@ -8,5 +8,5 @@ export const perspectivePreprintUrl =
 export const siteUrl = "https://biofabtoolkit.accelerationconsortium.ai";
 
 /** GitHub repo backing the atlas corpus, used for "suggest a tool" issue links. */
-export const githubRepo = "AC-SDL6/dyi-biofabrication";
+export const githubRepo = "AccelerationConsortium/dyi-biofabrication";
 export const githubRepoUrl = `https://github.com/${githubRepo}`;

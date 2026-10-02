@@ -21,7 +21,7 @@ GitHub's issue forms accept any declared `input`, `textarea` or `dropdown` field
 The repository URL comes from one place, `site/src/config/site.ts`:
 
 ```ts
-export const githubRepo = "AC-SDL6/dyi-biofabrication";
+export const githubRepo = "AccelerationConsortium/dyi-biofabrication";
 export const githubRepoUrl = `https://github.com/${githubRepo}`;
 ```
 
@@ -87,7 +87,7 @@ Draft: title `The Enderstruder: an accessible open-source syringe extruder`, DOI
 URL the page opens (line-broken for reading; 1.4 kB in total):
 
 ```
-https://github.com/AC-SDL6/dyi-biofabrication/issues/new
+https://github.com/AccelerationConsortium/dyi-biofabrication/issues/new
   ?template=suggest-record.yml
   &title=Propose+paper%3A+The+Enderstruder%3A+an+accessible+open-source+syringe+extruder
   &paper=The+Enderstruder%3A+an+accessible+open-source+syringe+extruder
@@ -145,7 +145,7 @@ Same pattern, with one addition: the page reads `?build=` from its own URL and p
 
 ## Private repository
 
-While `AC-SDL6/dyi-biofabrication` is private, `/issues/new` returns 404 to anyone outside the organisation. Both form pages say so and offer **Copy details** as the fallback. The forms need no change when the repository is made public.
+While `AccelerationConsortium/dyi-biofabrication` is private, `/issues/new` returns 404 to anyone outside the organisation. Both form pages say so and offer **Copy details** as the fallback. The forms need no change when the repository is made public.
 
 ## Checking it locally
 
