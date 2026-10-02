@@ -2,7 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import ScanHeader from "../components/ScanHeader.astro";
 import { criteriaRubric, criteriaStats, papers, screening, stats } from "../data/loaders";
-import { githubRepo, githubRepoUrl } from "../config/site";
+import { githubRepoUrl } from "../config/site";
 import { FILE_TYPES } from "../data/file-types";
 import { METRICS } from "../data/metrics";
 import { holdings } from "../data/corpus-gaps";
@@ -146,12 +146,6 @@ const steps = [
       </table>
     </div>
     <p class="qualifies-foot">{screening.kept} of {screening.screened} screened papers met the rule; <a href="/about#inclusion">the papers set aside are listed on the About page.</a> Already in the index? <a href={`${githubRepoUrl}/issues/new?template=complete-record.yml`}>Fill a gap in a record</a> instead.</p>
-  </div>
-
-  <div class="panel access-note">
-    <strong>Note:</strong> this repository is currently private. Opening the issue only works if your GitHub account
-    has access to <a href={githubRepoUrl} target="_blank" rel="noreferrer">{githubRepo}</a>. Without access, use
-    <em>Copy details</em> on the last step and send the text, with any files, to the maintainers.
   </div>
   </aside>
 
@@ -399,15 +393,9 @@ const steps = [
   .qualifies-table td:first-child { color: var(--ink); }
   .qualifies-table td:last-child { color: var(--muted); }
   .qualifies-foot { margin: var(--space-3) 0 0; }
-  .qualifies-note a, .access-note a { color: var(--accent); }
-  .access-note {
-    padding: var(--space-3) var(--space-4);
-    margin: 0;
-    font-size: var(--text-sm);
-    border-color: color-mix(in oklab, var(--accent-2) 30%, var(--line));
-  }
+  .qualifies-note a { color: var(--accent); }
 
-  /* Form on the left, the rule and the access note in a rail on the right, so the page is one
+  /* Form on the left, the rule in a rail on the right, so the page is one
      working surface rather than a full-width band over a half-width form. */
   /* The header intro may run as wide as the form column, so it takes two lines rather than four. */
   :global(.scan-header-intro) { max-width: 75ch; }

@@ -1,7 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import ScanHeader from "../components/ScanHeader.astro";
-import { githubRepo, githubRepoUrl } from "../config/site";
+import { githubRepoUrl } from "../config/site";
 
 const outcomes = [
   "Completed and working",
@@ -29,12 +29,6 @@ const settings = [
     title="Did you try to build one of these?"
     description="A design nobody has rebuilt is a claim rather than a tool. Attempts that stalled or failed are as useful as ones that worked: they tell the next laboratory what the documentation leaves out. Reports are not scores, and the Atlas does not rank builds."
   />
-
-  <div class="panel access-note">
-    <strong>Note:</strong> this repository is currently private, so opening the issue works only if
-    your GitHub account has access to <a href={githubRepoUrl} target="_blank" rel="noreferrer">{githubRepo}</a>.
-    Otherwise use <em>Copy report</em> and send it to the maintainers.
-  </div>
 
   <form id="rebuild-form" class="rr-layout" novalidate>
     <div class="rr-main">
@@ -128,13 +122,6 @@ const settings = [
 </BaseLayout>
 
 <style>
-  .access-note {
-    padding: var(--space-3) var(--space-4);
-    margin-bottom: var(--space-5);
-    font-size: var(--text-sm);
-    border-color: color-mix(in oklch, var(--accent-2) 30%, var(--line));
-  }
-
   .rr-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 22rem;

@@ -143,9 +143,9 @@ The template's checkboxes (`fields`) cannot be pre-filled from a URL, so the gap
 
 Same pattern, with one addition: the page reads `?build=` from its own URL and pre-fills the **Which build** field, which is how a record page's *Report a rebuild* button arrives with the title and DOI already entered.
 
-## Private repository
+## Repository access
 
-While `AccelerationConsortium/dyi-biofabrication` is private, `/issues/new` returns 404 to anyone outside the organisation. Both form pages say so and offer **Copy details** as the fallback. The forms need no change when the repository is made public.
+`AccelerationConsortium/dyi-biofabrication` is public, so `/issues/new` works for anyone signed in to GitHub. **Copy details** remains the fallback for anyone without an account.
 
 ## Checking it locally
 
