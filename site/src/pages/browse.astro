@@ -413,8 +413,21 @@ const facetGroups = FACETS.map((f) => ({
           </tbody>
         </table>
       </div>
-
       <p class="shop-empty" id="atlas-empty" hidden>No builds match these filters.</p>
+        <p class="atlas-footnote">
+        <strong>—</strong> means the source records nothing, not that the answer is no.<br />
+        <strong>+ host</strong> and <strong>*</strong> mark a cost that excludes the printer or robot arm the
+        design mounts on. <br /> <strong>?</strong> marks a figure whose source names no currency, shown as USD.
+        Costs are as each paper states them, not converted between currencies or adjusted for inflation.<br />
+        <strong>Build/skill</strong> is the parts-sourcing score / the skill-needed score, each out of 5, higher is easier; across this corpus both
+        run 2–4 rather than the full 1–5, so a 3 is the middle of the field.<br />
+        <strong>Reports</strong> shows five marks, one per performance measurement a laboratory needs —
+        motion accuracy, volumetric accuracy, cell viability, unattended operation, compliance with a
+        standard — coloured where the paper states a number and grey where it does not. Dashed marks
+        mean the full text is not held, so the question is unanswered rather than answered no.<br />
+        <a href="/about">How this index is built</a> · <a href="/api">API</a> ·
+        <a href="/graph">Relationship graph</a> · <a href="/suggest">Propose a paper</a>
+      </p>
     </div>
 
     <aside class="map-pane" id="atlas-map" aria-label="Relationship map">
@@ -455,22 +468,8 @@ const facetGroups = FACETS.map((f) => ({
       </p>
       <section class="map-selection" id="atlas-selection" hidden aria-live="polite"></section>
     </aside>
-  </div>
 
-  <p class="atlas-footnote">
-    <strong>—</strong> means the source records nothing, not that the answer is no.
-    <strong>+ host</strong> and <strong>*</strong> mark a cost that excludes the printer or robot arm the
-    design mounts on. <strong>?</strong> marks a figure whose source names no currency, shown as USD.
-    Costs are as each paper states them, not converted between currencies or adjusted for inflation.
-    <strong>Build/skill</strong> is the parts-sourcing score / the skill-needed score, each out of 5, higher is easier; across this corpus both
-    run 2–4 rather than the full 1–5, so a 3 is the middle of the field.
-    <strong>Reports</strong> shows five marks, one per performance measurement a laboratory needs —
-    motion accuracy, volumetric accuracy, cell viability, unattended operation, compliance with a
-    standard — coloured where the paper states a number and grey where it does not. Dashed marks
-    mean the full text is not held, so the question is unanswered rather than answered no.
-    <a href="/about">How this index is built</a> · <a href="/api">API</a> ·
-    <a href="/graph">Relationship graph</a> · <a href="/suggest">Propose a paper</a>
-  </p>
+  </div>
 
   <script>
     import { initAtlasIndex } from "../scripts/atlas-index.mjs";
@@ -512,7 +511,7 @@ const facetGroups = FACETS.map((f) => ({
     .workspace {
       width: min(calc(100vw - 2rem), 96rem);
       margin-inline: calc(50% - min(calc(50vw - 1rem), 48rem));
-    }
+    } 
   }
 
   @media (min-width: 900px) {
